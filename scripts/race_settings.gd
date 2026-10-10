@@ -4,7 +4,7 @@ extends Resource
 
 @export_category("Difficulty rewards")
 @export var starting_seconds: PackedFloat32Array = [180.0, 120.0, 90.0]
-@export var bonus_seconds: PackedFloat32Array = [90.0, 60.0, 45.0]
+@export var bonus_seconds: PackedFloat32Array = [55.0, 50.0, 45.0]
 @export var clean_pass_bonus_points: PackedInt32Array = [4000, 2000, 1000]
 @export_category("Driving")
 @export var speed_kmh: float = 180.0

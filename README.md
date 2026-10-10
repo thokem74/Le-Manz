@@ -44,8 +44,8 @@ Open `project.godot` in Godot and press **F5**. On Android, install
 
 | Difficulty | Ten-car points | Starting clock | Extra time per 20,000 points |
 |---|---:|---:|---:|
-| Easy | 4,000 | 180 seconds | 90 seconds |
-| Normal | 2,000 | 120 seconds | 60 seconds |
+| Easy | 4,000 | 180 seconds | 55 seconds |
+| Normal | 2,000 | 120 seconds | 50 seconds |
 | Hard | 1,000 | 90 seconds | 45 seconds |
 
 Difficulty changes clocks and ten-car point rewards; driving and traffic stay
