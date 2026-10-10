@@ -32,6 +32,8 @@ func run() -> void:
 	check_closed_gaps(game)
 	check_narrow_escape_routes(game)
 	check_portrait_geometry()
+	await check_driving_audio(game)
+	check_immersion_graphics(game)
 	check_clean_run_thresholds(game)
 	check_difficulty_playthroughs(game)
 	game.free()
@@ -519,3 +521,132 @@ func check_narrow_escape_routes(game: Node) -> void:
 			collided = true
 	check(not collided and cleared == 8, "Held steering escapes eight alternating narrow obstacles at the minimum gap")
 	game.player.clear_input()
+
+
+func check_driving_audio(game: Node) -> void:
+	game.start_race()
+	game.phase = game.Phase.RACING
+	game.audio.set_enabled(true)
+	game.audio.set_engine(true)
+	game.audio.advance_mix(0.1)
+	check(game.audio.engine.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD, "Imported engine has forward looping enabled")
+	await create_timer(1.25).timeout
+	check(game.audio.engine.playing, "Engine remains playing beyond its one-second loop boundary")
+	check(is_equal_approx(game.audio.engine.pitch_scale, 1.0), "Racing engine pitch remains steady")
+	game.audio.set_engine(true, true)
+	game.audio.advance_mix(0.1)
+	check(is_equal_approx(game.audio.engine.pitch_scale, 0.55) and game.audio.engine.volume_db < -9.0, "Repair engine is lower and quieter")
+	game.audio.set_engine(false)
+	game.audio.advance_mix(0.1)
+	check(not game.audio.engine.playing, "Engine fade ends playback")
+	game.audio.set_engine(true)
+	game.audio.set_driving_effects(true, true)
+	await create_timer(1.25).timeout
+	check(game.audio.ice_slip.playing and game.audio.repair.playing, "Slip and repair effects loop beyond their sample duration")
+	game.audio.set_driving_effects(false, false)
+	check(not game.audio.ice_slip.playing and not game.audio.repair.playing, "Driving loops stop when their states end")
+	game.audio.stop_all()
+	for index in range(4):
+		game.audio.play_pass(-56.0 if index % 2 == 0 else 56.0)
+		var bus: int = AudioServer.get_bus_index("Pass%d" % index)
+		var pan: AudioEffectPanner = AudioServer.get_bus_effect(bus, 0)
+		check(pan.pan < 0.0 if index % 2 == 0 else pan.pan > 0.0, "Passing voice %d uses the correct stereo side" % index)
+	check(game.audio.next_pass_voice == 0, "Four-voice passing pool wraps without allocating players")
+	game.audio.stop_all()
+	# Exercise the shipped once-only scoring event, including the ten-pass bonus.
+	for index in range(10):
+		var car: TrafficCar = game.traffic.cars[0]
+		car.activate(1, 100.0, Color.WHITE, false)
+		car.position = Vector2(game.player.position.x - 56.0, game.road.player_y + 29.0)
+		game.traffic.advance(0.02, game.road, game.settings, 0.0, true)
+		var voice_after_pass: int = game.audio.next_pass_voice
+		game.traffic.advance(0.02, game.road, game.settings, 0.0, true)
+		check(game.audio.next_pass_voice == voice_after_pass, "Overtake %d cannot replay its passing sound" % index)
+		game.traffic.reset_traffic()
+	check(game.session.total_passes == 10 and game.audio.next_pass_voice == 2, "Every clean overtake starts exactly one passing sound")
+	check(game.audio.bonus.playing, "Ten-pass bonus remains a distinct sound")
+	game.audio.set_enabled(false)
+	game.audio.play_pass(56.0)
+	game.audio.play_effect(&"crash")
+	game.audio.set_engine(true)
+	game.audio.set_driving_effects(true, true)
+	var all_silent: bool = true
+	for voice in game.audio.get_children():
+		all_silent = all_silent and not voice.playing
+	check(all_silent, "Persistent sound toggle gates every audio voice")
+	game.audio.set_enabled(true)
+	game.audio.set_engine(true)
+	game.audio.play_pass(56.0)
+	game.pause_race()
+	check(not game.audio.engine.playing and not game.audio.passing_voices[0].playing, "Pause silences engine and passing voices immediately")
+	game.resume_race()
+	check(game.audio.engine.playing, "Explicit resume restarts the engine")
+	game.begin_finish()
+	game.audio.advance_mix(0.1)
+	check(not game.audio.engine.playing and game.audio.finish.playing, "Finish fades the engine and plays its own sound")
+	game.start_race()
+	check(not game.audio.engine.playing and not game.audio.finish.playing, "Restart clears active sound before countdown")
+	game.audio.set_enabled(false)
+
+
+func check_immersion_graphics(game: Node) -> void:
+	game.start_race()
+	game.phase = game.Phase.RACING
+	check(game.road.scenery.size() == 48, "Road uses a fixed pool of 48 authored scenery instances")
+	var first_prop_id: int = game.road.scenery[0].get_instance_id()
+	for section in range(5):
+		game.road.section = section
+		game.road.scroll = 2200.0
+		game.road.advance(1.0, 120.0)
+		var visible_count: int = 0
+		var fits: bool = true
+		for prop in game.road.scenery:
+			if not prop.visible:
+				continue
+			visible_count += 1
+			var edge: float = game.road.centre_x(prop.position.y)
+			fits = fits and prop.position.y - 12.0 >= game.road.playfield_top and prop.position.y + 12.0 <= game.road.playfield_bottom
+			fits = fits and prop.position.x >= 8.0 and prop.position.x <= 272.0
+			fits = fits and absf(prop.position.x - edge) >= game.road.width * 0.5 + 12.0
+		check(visible_count > 0 and fits, "Section %d scenery fits outside road and below dashboard" % section)
+		if section == RaceRoad.Section.ICE:
+			var snowy: bool = false
+			var markings: bool = false
+			for prop in game.road.scenery:
+				snowy = snowy or (prop.visible and prop.sprite.frame >= 5)
+			for row in game.road.rows:
+				markings = markings or (row.visible and row.ice_mark.visible)
+			check(snowy and markings, "Ice shows snowy scenery and sparse surface details")
+		if section == RaceRoad.Section.NIGHT:
+			var reflective: bool = false
+			for prop in game.road.scenery:
+				reflective = reflective or (prop.visible and prop.reflector.visible)
+			check(reflective, "Night roadside markers remain reflective")
+	game.road.advance(30.0, 120.0)
+	check(game.road.scenery[0].get_instance_id() == first_prop_id, "Scrolled scenery recycles existing instances")
+	game.road.section = RaceRoad.Section.ICE
+	game.player.lateral_velocity = 31.0
+	game.update_driving_feedback(0.1)
+	check(game.effects.skid.emitting, "Ice lateral velocity above 30 emits a subtle skid trail")
+	game.player.lateral_velocity = 30.0
+	game.update_driving_feedback(0.1)
+	check(not game.effects.skid.emitting, "Ice skid emission stops at its speed threshold")
+	game.begin_crash()
+	check(game.effects.crash.emitting and game.effects.crash.amount == 8, "Crash triggers a bounded eight-particle burst")
+	game.advance_pit(2.0)
+	game.update_driving_feedback(0.1)
+	check(game.effects.repair_indicator.visible, "Repair indicator appears after the car reaches the bay")
+	var repair_frame: int = game.effects.repair_indicator.frame
+	game.update_driving_feedback(0.13)
+	check(game.effects.repair_indicator.frame != repair_frame, "Repair indicator animates")
+	game.pause_race()
+	check(not game.effects.crash.visible and not game.effects.skid.visible and not game.effects.repair_indicator.visible, "Pause clears all decorative effects")
+	var paused_scroll: float = game.road.scroll
+	game._physics_process(1.0)
+	check(game.road.scroll == paused_scroll, "Roadside scenery remains frozen while paused")
+	game.resume_race()
+	check(game.effects.repair_indicator.visible, "Resume restores the current repair feedback")
+	game.begin_finish()
+	check(not game.effects.repair_indicator.visible and not game.effects.skid.emitting, "Finish clears driving effects")
+	game.start_race()
+	check(not game.effects.crash.visible and game.effects.repair_elapsed == 0.0, "Restart clears particles and repair animation")

@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 [ext_resource type="Script" path="res://scripts/game.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/road.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/player_car.tscn" id="3"]
@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" path="res://assets/art/finish.svg" id="8"]
 [ext_resource type="Resource" path="res://resources/race_settings.tres" id="9"]
 [ext_resource type="Script" path="res://scripts/profile.gd" id="10"]
+[ext_resource type="PackedScene" path="res://scenes/race_effects.tscn" id="11"]
 [node name="LeManz" type="Node2D"]
 script = ExtResource("1")
 settings = ExtResource("9")
@@ -24,6 +25,7 @@ z_index = 1
 visible = false
 texture = ExtResource("8")
 position = Vector2(140, -16)
+[node name="Effects" parent="." instance=ExtResource("11")]
 [node name="Audio" parent="." instance=ExtResource("5")]
 [node name="Profile" type="Node" parent="."]
 script = ExtResource("10")

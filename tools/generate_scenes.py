@@ -110,35 +110,112 @@ strip = '''[gd_scene load_steps=6 format=3]
 [ext_resource type="Texture2D" path="res://assets/art/pixel.svg" id="2"]
 [ext_resource type="Texture2D" path="res://assets/art/kerb.svg" id="3"]
 [ext_resource type="Texture2D" path="res://assets/art/dash.svg" id="4"]
-[ext_resource type="Texture2D" path="res://assets/art/tree.svg" id="5"]
+[ext_resource type="Texture2D" path="res://assets/art/ice_mark.svg" id="6"]
 [node name="RoadStrip" type="Node2D"]
 script = ExtResource("1")
 '''
-for name, resource, x, scale in [("Grass", 2, 140, 280), ("Surface", 2, 140, 224), ("LeftEdge", 3, 28, 1), ("RightEdge", 3, 252, 1), ("Dash0", 4, 84, 1), ("Dash1", 4, 140, 1), ("Dash2", 4, 196, 1), ("Scenery", 5, 8, 1)]:
+for name, resource, x, scale in [("Grass", 2, 140, 280), ("Surface", 2, 140, 224), ("LeftEdge", 3, 28, 1), ("RightEdge", 3, 252, 1), ("Dash0", 4, 84, 1), ("Dash1", 4, 140, 1), ("Dash2", 4, 196, 1), ("IceMark", 6, 140, 1)]:
     strip += f'[node name="{name}" type="Sprite2D" parent="."]\ntexture = ExtResource("{resource}")\nposition = Vector2({x}, 0)\nscale = Vector2({scale}, 1)\n'
 save("scenes/road_strip.tscn", strip)
-road = '''[gd_scene load_steps=3 format=3]
+scenery = '''[gd_scene load_steps=4 format=3]
+[ext_resource type="Script" path="res://scripts/road_scenery.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/art/scenery.svg" id="2"]
+[ext_resource type="Texture2D" path="res://assets/art/reflector.svg" id="3"]
+[node name="RoadScenery" type="Node2D"]
+script = ExtResource("1")
+[node name="Sprite" type="Sprite2D" parent="."]
+texture = ExtResource("2")
+hframes = 8
+[node name="Reflector" type="Sprite2D" parent="."]
+texture = ExtResource("3")
+visible = false
+'''
+save("scenes/road_scenery.tscn", scenery)
+road = '''[gd_scene load_steps=4 format=3]
 [ext_resource type="Script" path="res://scripts/road.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/road_strip.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/road_scenery.tscn" id="3"]
 [node name="Road" type="Node2D"]
 script = ExtResource("1")
 [node name="Rows" type="Node2D" parent="."]
 '''
 for i in range(160):
     road += f'[node name="Strip{i:02}" parent="Rows" instance=ExtResource("2")]\nposition = Vector2(0, {64 + i * 8 + 4})\n'
+road += '[node name="Scenery" type="Node2D" parent="."]\n'
+for i in range(48):
+    road += f'[node name="Prop{i:02}" parent="Scenery" instance=ExtResource("3")]\nvisible = false\n'
 save("scenes/road.tscn", road)
 
-audio = '[gd_scene load_steps=8 format=3]\n[ext_resource type="Script" path="res://scripts/audio.gd" id="1"]\n'
-effects = [("Engine", "engine", -7), ("Crash", "crash", -3), ("Bonus", "bonus", -6), ("ExtraTime", "extra_time", -6), ("Finish", "finish", -6), ("Tick", "tick", -9)]
+# Separate panning buses prevent one passing voice from moving another voice.
+buses = '''[gd_resource type="AudioBusLayout" load_steps=6 format=3]
+[sub_resource type="AudioEffectHardLimiter" id="limiter"]
+ceiling_db = -1.0
+'''
+for i in range(4):
+    buses += f'[sub_resource type="AudioEffectPanner" id="pan{i}"]\n'
+buses += '[resource]\nbus/0/name = &"Master"\nbus/0/effect/0/effect = SubResource("limiter")\nbus/0/effect/0/enabled = true\n'
+for i in range(4):
+    buses += f'bus/{i + 1}/name = &"Pass{i}"\nbus/{i + 1}/send = &"Master"\nbus/{i + 1}/effect/0/effect = SubResource("pan{i}")\nbus/{i + 1}/effect/0/enabled = true\n'
+save("default_bus_layout.tres", buses)
+audio = '[gd_scene load_steps=14 format=3]\n[ext_resource type="Script" path="res://scripts/audio.gd" id="1"]\n'
+effects = [("Engine", "engine", -3), ("Crash", "crash", -3), ("Bonus", "bonus", -5), ("ExtraTime", "extra_time", -5), ("Finish", "finish", -5), ("Tick", "tick", -7), ("IceSlip", "ice_slip", -9), ("Repair", "repair", -7)]
+effects += [(f"Pass{i}", "passing", -8) for i in range(4)]
 for index, (_, file, _) in enumerate(effects, 2):
     audio += f'[ext_resource type="AudioStream" path="res://assets/audio/{file}.wav" id="{index}"]\n'
 audio += '[node name="Audio" type="Node"]\nscript = ExtResource("1")\n'
 for index, (name, _, volume) in enumerate(effects, 2):
     audio += f'[node name="{name}" type="AudioStreamPlayer" parent="."]\nstream = ExtResource("{index}")\nvolume_db = {volume}.0\n'
+    if name.startswith("Pass"):
+        audio += f'bus = &"{name}"\n'
 save("scenes/audio.tscn", audio)
 
+# Particles stay scene-authored and bounded; only emission/state is scripted.
+effects_scene = '''[gd_scene load_steps=6 format=3]
+[ext_resource type="Script" path="res://scripts/race_effects.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/art/spark.svg" id="2"]
+[ext_resource type="Texture2D" path="res://assets/art/repair.svg" id="3"]
+[sub_resource type="Gradient" id="crash_colour"]
+colors = PackedColorArray(1, 0.9, 0.4, 1, 0.94, 0.49, 0.34, 0)
+[sub_resource type="Gradient" id="skid_colour"]
+colors = PackedColorArray(0.93, 0.98, 1, 0.55, 0.7, 0.86, 0.91, 0)
+[node name="Effects" type="Node2D"]
+script = ExtResource("1")
+z_index = 3
+[node name="Crash" type="CPUParticles2D" parent="."]
+visible = false
+emitting = false
+amount = 8
+lifetime = 0.35
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("2")
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 30.0
+initial_velocity_max = 65.0
+color_ramp = SubResource("crash_colour")
+[node name="Skid" type="CPUParticles2D" parent="."]
+visible = false
+emitting = false
+amount = 4
+lifetime = 0.3
+local_coords = false
+texture = ExtResource("2")
+direction = Vector2(0, 1)
+spread = 15.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 70.0
+initial_velocity_max = 90.0
+color_ramp = SubResource("skid_colour")
+[node name="RepairIndicator" type="Sprite2D" parent="."]
+visible = false
+texture = ExtResource("3")
+hframes = 3
+'''
+save("scenes/race_effects.tscn", effects_scene)
+
 # The complete interface is authored here as scene nodes, not added by GDScript.
-main = '''[gd_scene load_steps=11 format=3]
+main = '''[gd_scene load_steps=12 format=3]
 [ext_resource type="Script" path="res://scripts/game.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/road.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/player_car.tscn" id="3"]
@@ -149,6 +226,7 @@ main = '''[gd_scene load_steps=11 format=3]
 [ext_resource type="Texture2D" path="res://assets/art/finish.svg" id="8"]
 [ext_resource type="Resource" path="res://resources/race_settings.tres" id="9"]
 [ext_resource type="Script" path="res://scripts/profile.gd" id="10"]
+[ext_resource type="PackedScene" path="res://scenes/race_effects.tscn" id="11"]
 [node name="LeManz" type="Node2D"]
 script = ExtResource("1")
 settings = ExtResource("9")
@@ -164,6 +242,7 @@ z_index = 1
 visible = false
 texture = ExtResource("8")
 position = Vector2(140, -16)
+[node name="Effects" parent="." instance=ExtResource("11")]
 [node name="Audio" parent="." instance=ExtResource("5")]
 [node name="Profile" type="Node" parent="."]
 script = ExtResource("10")

@@ -2,7 +2,7 @@ class_name RaceTraffic
 extends Node2D
 ## A scene-authored pool keeps gameplay free of repeated allocations on phones.
 
-signal overtaken
+signal overtaken(car: TrafficCar)
 
 const CAR_COLOURS: Array[Color] = [
 	Color("d9d56e"), Color("8e80ce"), Color("6ecbd4"), Color("f2a66c")
@@ -77,7 +77,7 @@ func advance(
 		if not car.passed and car.position.y > road.player_y + car.hit_rect().size.y:
 			car.passed = true
 			if allow_passes:
-				overtaken.emit()
+				overtaken.emit(car)
 		if car.position.y > road.playfield_bottom + 30.0:
 			car.deactivate()
 

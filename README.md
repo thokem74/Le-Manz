@@ -31,6 +31,12 @@ Open `project.godot` in Godot and press **F5**. On Android, install
 - Roads cycle through open road, curves, a narrow motorway, ice, and night.
   Narrow sections use the middle two marked lanes and smoothly constrain the car;
   headlights and rear lights help with night driving.
+- A continuous synthesized engine runs while racing. Each clean overtake plays
+  a short stereo sweep; ten-pass bonuses have their own sound. Ice sliding and
+  repairs add quieter effects. **Settings → Sound** controls all audio.
+- Roadside trees, shrubs, signs, posts, and rails scroll past; ice adds snow and
+  surface markings, and night markers reflect light. Crashes emit brief pixel
+  sparks, ice slides leave a subtle trail, and the pit displays a repair indicator.
 - Backgrounding freezes the race and audio. Returning requires **Resume Race**.
 
 | Difficulty | Starting clock | Extra time per 20,000 points |
@@ -71,8 +77,12 @@ their behavior rather than constructing their visuals at runtime.
 - `RaceTraffic` / `TrafficCar`: 24 reusable cars, spacing, indicators,
   overtakes, and forgiving collision bounds. Narrow-road traffic has equal
   relative speeds and at least a 96-pixel gap so it cannot form a traffic wall.
-- `GameProfile` / `RaceAudio`: local persistence and audio; `game.gd` coordinates
-  race phases and the existing UI nodes.
+- `GameProfile` / `RaceAudio`: local persistence and audio. Engine levels and
+  fade duration are Inspector-editable on the Audio node. Four passing voices
+  use separate panning buses, with a -1 dB master limiter and alert ducking.
+- `RoadScenery` / `RaceEffects`: 48 reusable scenery instances, four skid particles,
+  eight crash particles, and repair animation. These systems are decorative;
+  `game.gd` coordinates their state with the race phases.
 
 Rendering uses Compatibility mode and a **280 × 480** base logical canvas with
 nearest-neighbour filtering and aspect-preserving scaling. Tall phones extend the
@@ -86,7 +96,8 @@ permission, account, advertising, or server is required.
 The Python 3 standard-library tools are optional: `tools/generate_assets.py`
 recreates the hand-designed SVG sprites, bitmap font, and synthesized WAVs;
 `tools/generate_scenes.py` recreates the initial scene/theme layouts.
-**Regenerating scenes overwrites manual edits to those scenes and the theme.**
+**Regenerating scenes overwrites manual edits to those scenes, the theme, and the
+bus layout.**
 Ordinary game development can use the Godot editor directly without these tools.
 
 ## Build Android
@@ -117,6 +128,7 @@ store release signing and publishing require a separate release setup.
 
 ```sh
 godot --headless --path . --script tests/run_tests.gd
+godot --path . --script tests/audio_mix.gd
 godot --path . --script tests/capture.gd -- --view=night --out=/tmp/le-manz-night.png
 ```
 
@@ -124,17 +136,28 @@ The integration suite covers difficulty clocks/bonuses, scoring, persistence,
 continuous steering, short presses, ice momentum, road boundaries and narrowing,
 multi-touch event handling, pit recovery,
 expiry, restart, background notifications, Android Back, traffic spacing,
-and complete races. It uses isolated `/tmp` profiles rather than your game saves.
+and complete races, audio state transitions, scenery bounds, and effects. It uses isolated `/tmp` profiles rather than your game saves.
 The rendering script captures real scene layouts; views include `title`, `help`,
-`settings`, `pause`, `results`, `countdown`, `road`, `curves`, `narrow`, `ice`, `night`, `crash1`, `crash2`, and `pit`.
+`settings`, `pause`, `results`, `countdown`, `road`, `curves`, `narrow`, `ice`, `night`, `crash1`, `crash2`, `pit`, and `ice_slide`.
 
 Validation on **10 October 2026**:
 
-- 251 integration checks passed, including complete races on all three levels,
+The earlier engine was found to stop after one second: WAV import mode **1** is
+Disabled, whereas **2** is Forward. All three sustained effects now use mode 2,
+and the generator preserves that setting. The enum distinction is documented in
+[Godot's WAV importer](https://github.com/godotengine/godot/blob/master/editor/import/resource_importer_wav.cpp).
+
+
+- 299 integration checks passed, including complete races on all three levels,
   timer bonuses, records, releases over UI, cancelled touches, and pause/restart.
   Divider and edge collision checks cover open and narrow roads. A 60 Hz simulation
   steers past eight alternating narrow obstacles spaced exactly 96 pixels apart.
   Blocked spawn retries and narrowing gap enforcement also pass.
+- The real-output audio test passed: engine output continues beyond its loop,
+  passing sweeps pan left/right, and overlapping effects peak at **0.8913**
+  (approximately -1 dBFS). Engine loop RMS was **0.1344**; muted peak was **0**.
+  This test requires a working desktop audio driver and measures the digital mix,
+  rather than speaker listening quality.
 - Rendered and inspected menus, countdown, and every road variant at approximately
   **9:16**, **9:20**, and **3:4** using actual offscreen Godot scene rendering.
   Add `--size=280x622` or `--size=360x480` to the capture command for these sizes.
@@ -148,6 +171,12 @@ Validation on **10 October 2026**:
   only about 12 logical pixels; a 900 ms hold moved toward the edge. Collisions
   triggered automatic recovery, and the enlarged repair sprite remained visible
   inside its bay. Backgrounding returned to the resume screen.
+- The enhanced build was installed on the same Samsung device. Sound toggling
+  saved correctly and was restored to ON. Android reported an active, unmuted
+  **44.1 kHz stereo** OpenSL ES media output after racing started. This confirms
+  output initialization; audible speaker quality is still unverified. Touch
+  steering, pause, explicit resume, snowy scenery, and reflective night scenery
+  were exercised again.
 - Android vibration history confirms completed **250 ms** crash requests,
   including two crashes in the enlarged build.
 - Deterministic collision-free simulation reaches the first time bonus at about
@@ -162,7 +191,7 @@ Subjective audio listening, measured frame pacing, long human difficulty
 playtests, physical simultaneous multi-touch, and subjective ice feel remain
 unverified. Ice acceleration,
 drift, countersteering, and short-press steering are covered by automated tests.
-The device run produced no Godot script or audio errors. Additional devices remain
+The enhanced device run produced no Godot script or audio errors. Additional devices remain
 useful for performance, cutout, and compatibility feedback.
 
 ## References

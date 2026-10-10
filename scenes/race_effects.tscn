@@ -1,0 +1,41 @@
+[gd_scene load_steps=6 format=3]
+[ext_resource type="Script" path="res://scripts/race_effects.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/art/spark.svg" id="2"]
+[ext_resource type="Texture2D" path="res://assets/art/repair.svg" id="3"]
+[sub_resource type="Gradient" id="crash_colour"]
+colors = PackedColorArray(1, 0.9, 0.4, 1, 0.94, 0.49, 0.34, 0)
+[sub_resource type="Gradient" id="skid_colour"]
+colors = PackedColorArray(0.93, 0.98, 1, 0.55, 0.7, 0.86, 0.91, 0)
+[node name="Effects" type="Node2D"]
+script = ExtResource("1")
+z_index = 3
+[node name="Crash" type="CPUParticles2D" parent="."]
+visible = false
+emitting = false
+amount = 8
+lifetime = 0.35
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("2")
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 30.0
+initial_velocity_max = 65.0
+color_ramp = SubResource("crash_colour")
+[node name="Skid" type="CPUParticles2D" parent="."]
+visible = false
+emitting = false
+amount = 4
+lifetime = 0.3
+local_coords = false
+texture = ExtResource("2")
+direction = Vector2(0, 1)
+spread = 15.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 70.0
+initial_velocity_max = 90.0
+color_ramp = SubResource("skid_colour")
+[node name="RepairIndicator" type="Sprite2D" parent="."]
+visible = false
+texture = ExtResource("3")
+hframes = 3

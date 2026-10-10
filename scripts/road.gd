@@ -18,11 +18,14 @@ var playfield_top: float = 64.0
 var playfield_bottom: float = 480.0
 var player_y: float = 400.0
 var rows: Array[RoadStrip] = []
+var scenery: Array[RoadScenery] = []
 
 
 func _ready() -> void:
 	for child in $Rows.get_children():
 		rows.append(child as RoadStrip)
+	for child in $Scenery.get_children():
+		scenery.append(child as RoadScenery)
 	refresh()
 
 
@@ -94,7 +97,41 @@ func refresh() -> void:
 			dash.position.x = centre_x - 56.0 + index * 56.0
 			dash.visible = int((screen_y + scroll) / 8.0) % 4 < 2 and (width > 200.0 or index == 1)
 			dash.modulate = Color("53536a") if section == Section.NIGHT else Color("eeeecc")
-		var tree: Sprite2D = row.scenery
-		tree.position.x = 8.0 if row.get_index() % 2 == 0 else 272.0
-		tree.visible = int((screen_y + scroll) / 8.0) % 8 == 0
-		tree.modulate = Color("777799") if section == Section.NIGHT else Color.WHITE
+		row.ice_mark.visible = (
+			section == Section.ICE and int((screen_y + scroll) / 8.0) % 19 == 0
+		)
+		row.ice_mark.position.x = centre_x + float((row.get_index() * 17) % 70 - 35)
+	refresh_scenery()
+
+
+func refresh_scenery() -> void:
+	# Twenty-four rows on each side recycle without allocating during gameplay.
+	var spacing: float = 96.0
+	var cycle_length: float = spacing * 24.0
+	for index in range(scenery.size()):
+		var prop: RoadScenery = scenery[index]
+		var slot: int = index / 2
+		var side: int = -1 if index % 2 == 0 else 1
+		var distance: float = scroll + slot * spacing
+		var screen_y: float = playfield_top - 24.0 + fposmod(distance, cycle_length)
+		var edge_x: float = centre_x(screen_y) + side * width * 0.5
+		var screen_x: float = edge_x + side * 14.0
+		if slot % 2 != 0:
+			screen_x = 12.0 if side < 0 else 268.0
+		var fits: bool = screen_x >= 8.0 and screen_x <= 272.0
+		var outside_road: bool = (
+			screen_x + 8.0 <= edge_x - 4.0 if side < 0 else screen_x - 8.0 >= edge_x + 4.0
+		)
+		fits = fits and outside_road
+		# Leave the repair bay and its label unobstructed.
+		var covers_pit: bool = screen_x < 44.0 and absf(screen_y - player_y) < 60.0
+		prop.visible = (
+			fits and not covers_pit
+			and screen_y >= playfield_top + 12.0 and screen_y <= playfield_bottom - 12.0
+		)
+		if not prop.visible:
+			continue
+		prop.position = Vector2(screen_x, screen_y)
+		var cycle: int = floori(distance / cycle_length)
+		var kind: int = (slot * 7 + index % 2 * 3 + cycle * 3) % 5
+		prop.configure(kind, section)

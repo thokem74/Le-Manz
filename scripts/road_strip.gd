@@ -7,4 +7,4 @@ extends Node2D
 @onready var left_edge: Sprite2D = $LeftEdge
 @onready var right_edge: Sprite2D = $RightEdge
 @onready var dashes: Array[Sprite2D] = [$Dash0, $Dash1, $Dash2]
-@onready var scenery: Sprite2D = $Scenery
+@onready var ice_mark: Sprite2D = $IceMark

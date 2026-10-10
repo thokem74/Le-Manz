@@ -5,6 +5,7 @@ No original game files are required. Run from any directory with Python 3.
 """
 from pathlib import Path
 import math
+import re
 import random
 import struct
 import wave
@@ -146,6 +147,23 @@ svg("logo.svg", 166, 30, logo)
 # App icon follows the in-game car rather than retaining the Godot logo.
 svg("app_icon.svg", 192, 192, rect(0, 0, 192, 192, "#222034") + rect(40, 0, 112, 192, "#6c6c6c") + '<g transform="translate(48,45) scale(3)">' + car + "</g>" + rect(94, 0, 4, 28, "#eeeecc") + rect(94, 160, 4, 32, "#eeeecc"))
 
+# Eight 16 x 24 roadside props share one inspectable sprite atlas.
+props = [
+    rect(6, 15, 4, 9, "#663931") + rect(3, 1, 10, 14, "#346524") + rect(0, 5, 16, 9, "#6abe30") + rect(3, 4, 4, 4, "#99c653"),
+    rect(2, 13, 12, 8, "#346524") + rect(0, 15, 16, 5, "#6abe30") + rect(4, 13, 4, 2, "#99c653"),
+    rect(6, 7, 4, 17, "#eeeecc") + rect(6, 12, 4, 6, "#222034") + rect(7, 8, 2, 3, "#d9d56e"),
+    rect(7, 9, 2, 15, "#c3c3c3") + rect(0, 1, 16, 12, "#222034") + rect(1, 2, 14, 10, "#8e80ce") + rect(4, 5, 8, 2, "#eeeecc") + rect(8, 3, 2, 6, "#eeeecc"),
+    rect(5, 0, 3, 24, "#c3c3c3") + rect(9, 2, 2, 20, "#383848") + rect(4, 0, 8, 2, "#eeeecc") + rect(4, 22, 8, 2, "#eeeecc") + rect(5, 6, 3, 2, "#d9d56e"),
+    rect(6, 15, 4, 9, "#663931") + rect(3, 1, 10, 14, "#537e83") + rect(0, 5, 16, 9, "#6ecbd4") + rect(3, 1, 10, 3, "#ffffff") + rect(0, 5, 16, 3, "#eeeecc"),
+    rect(2, 13, 12, 8, "#537e83") + rect(0, 15, 16, 5, "#6ecbd4") + rect(2, 13, 12, 3, "#ffffff"),
+    rect(6, 7, 4, 17, "#eeeecc") + rect(6, 12, 4, 6, "#537e83") + rect(7, 8, 2, 3, "#b13e53"),
+]
+svg("scenery.svg", 128, 24, "".join(f'<g transform="translate({index * 16},0)">{art}</g>' for index, art in enumerate(props)))
+svg("ice_mark.svg", 8, 8, rect(0, 1, 3, 1, "#8ab8c9") + rect(2, 2, 1, 3, "#8ab8c9") + rect(3, 4, 4, 1, "#8ab8c9"))
+svg("spark.svg", 2, 2, rect(0, 0, 2, 2, "#ffffff"))
+svg("reflector.svg", 2, 3, rect(0, 0, 2, 3, "#d9d56e"))
+svg("repair.svg", 24, 10, "".join(f'<g transform="translate({i * 8},0)">' + rect(3, 4, 2, 6, "#6ecbd4") + rect(1, 0, 2, 4, "#6ecbd4") + rect(5, 0, 2, 4, "#6ecbd4") + rect(2, 3, 4, 2, "#eeeecc") + rect(0, 8 - i * 2, 1, 1, "#d9d56e") + '</g>' for i in range(3)))
+
 RATE = 22050
 
 
@@ -154,7 +172,7 @@ def write_wave(name, duration, sample):
     for i in range(int(RATE * duration)):
         t = i / RATE
         # Effects have soft edges; the engine is exactly periodic at the loop boundary.
-        envelope = 1.0 if name == "engine" else min(1.0, t / 0.008, (duration - t) / 0.018)
+        envelope = 1.0 if name in ("engine", "ice_slip", "repair") else min(1.0, t / 0.008, (duration - t) / 0.018)
         values.append(int(max(-1, min(1, sample(t) * envelope)) * 32767))
     with wave.open(str(AUDIO / f"{name}.wav"), "wb") as output:
         output.setparams((1, 2, RATE, 0, "NONE", "not compressed"))
@@ -165,35 +183,39 @@ def square(t, frequency):
     return 1.0 if math.sin(t * frequency * math.tau) >= 0 else -1.0
 
 
-write_wave("engine", 1.0, lambda t: 0.13 * square(t, 90) + 0.065 * square(t, 180) + 0.04 * math.sin(t * 45 * math.tau))
+# Integer harmonics of 60 Hz yield a periodic, zero-crossing one-second loop.
+write_wave("engine", 1.0, lambda t: (0.22 * math.sin(t * 120 * math.tau) + 0.16 * math.sin(t * 240 * math.tau) + 0.10 * math.sin(t * 480 * math.tau) + 0.065 * math.sin(t * 720 * math.tau)) * (0.9 + 0.1 * math.cos(t * 60 * math.tau)))
+write_wave("passing", 0.18, lambda t: math.sin(math.tau * (760 * t - 1200 * t * t)) * 0.24 * math.sin(math.pi * t / 0.18))
+write_wave("ice_slip", 1.0, lambda t: 0.07 * math.sin(t * 1080 * math.tau) * math.sin(t * 13 * math.tau) + 0.035 * math.sin(t * 1620 * math.tau))
+write_wave("repair", 1.0, lambda t: 0.10 * math.sin(t * 360 * math.tau) * (0.5 - 0.5 * math.cos(t * 8 * math.tau)))
 noise = random.Random(1982)
 write_wave("crash", 0.55, lambda t: (noise.uniform(-1, 1) * 0.45 + square(t, 40 + 80 * (1 - t / 0.55)) * 0.15) * (1 - t / 0.55))
 write_wave("tick", 0.09, lambda t: square(t, 660) * 0.18)
 write_wave("bonus", 0.32, lambda t: square(t, [523, 659, 784, 1046][min(3, int(t / 0.08))]) * 0.20)
 write_wave("extra_time", 0.64, lambda t: square(t, [523, 659, 784, 1046, 784, 1046, 1318, 1568][min(7, int(t / 0.08))]) * 0.20)
 write_wave("finish", 0.8, lambda t: square(t, [784, 659, 523, 392][min(3, int(t / 0.2))]) * 0.19)
-# Godot's WAV importer records the seamless engine loop in source control.
-engine_import = AUDIO / "engine.wav.import"
-if not engine_import.exists():
-    engine_import.write_text('''[remap]
+# WAV import mode 2 means Forward; mode 1 means Disabled, not LOOP_FORWARD.
+# Preserve importer identities while making regeneration restore loop settings.
+for name in ("engine", "ice_slip", "repair"):
+    import_file = AUDIO / f"{name}.wav.import"
+    if import_file.exists():
+        import_text = import_file.read_text()
+        import_text = re.sub(r"edit/loop_mode=\d+", "edit/loop_mode=2", import_text)
+    else:
+        import_text = f'''[remap]
 importer="wav"
 type="AudioStreamWAV"
-path="res://.godot/imported/engine.wav-generated.sample"
-
+path="res://.godot/imported/{name}.wav-generated.sample"
 [deps]
-source_file="res://assets/audio/engine.wav"
-dest_files=["res://.godot/imported/engine.wav-generated.sample"]
-
+source_file="res://assets/audio/{name}.wav"
+dest_files=["res://.godot/imported/{name}.wav-generated.sample"]
 [params]
-force/8_bit=false
-force/mono=false
-force/max_rate=false
-force/max_rate_hz=44100
 edit/trim=false
 edit/normalize=false
-edit/loop_mode=1
+edit/loop_mode=2
 edit/loop_begin=0
 edit/loop_end=-1
 compress/mode=0
-''')
-print("Generated pixel art, bitmap font and six arcade effects.")
+'''
+    import_file.write_text(import_text)
+print("Generated retro scenery, sprites and nine driving effects.")

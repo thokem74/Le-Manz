@@ -21,6 +21,7 @@ var new_record: bool = false
 @onready var player: PlayerCar = $Player
 @onready var traffic: RaceTraffic = $Traffic
 @onready var audio: RaceAudio = $Audio
+@onready var effects: RaceEffects = $Effects
 @onready var profile: GameProfile = $Profile
 @onready var hud: Control = $UI/HUD
 @onready var finish_line: Sprite2D = $FinishLine
@@ -127,10 +128,23 @@ func advance_race(delta: float) -> void:
 				begin_crash()
 	else:
 		advance_pit(delta)
+	update_driving_feedback(delta)
 	var clock_second: int = ceili(session.remaining_seconds)
 	if clock_second <= 10 and clock_second != last_clock_second:
 		audio.play_effect(&"tick")
 	last_clock_second = clock_second
+
+
+func update_driving_feedback(delta: float) -> void:
+	var sliding: bool = (
+		phase == Phase.RACING
+		and road.section == RaceRoad.Section.ICE
+		and absf(player.lateral_velocity) > 30.0
+	)
+	var progress: float = phase_elapsed / settings.repair_seconds
+	var in_bay: bool = phase == Phase.PIT and progress >= 0.45 and progress < 0.78
+	audio.set_driving_effects(sliding, in_bay)
+	effects.advance(delta, player.position, sliding, in_bay, $Pit.position)
 
 
 func advance_pit(delta: float) -> void:
@@ -172,15 +186,17 @@ func begin_crash() -> void:
 	headlights.visible = false
 	$UI/HUD/Banner.text = "PIT REPAIR"
 	show_notice("CRASH! CLEAN STREAK RESET", 2.0)
+	effects.burst_crash(player.position)
 	audio.play_effect(&"crash")
 	audio.set_engine(true, true)
 	if profile.vibration_enabled and OS.get_name() == "Android":
 		Input.vibrate_handheld(250)
 
 
-func _on_overtaken() -> void:
+func _on_overtaken(car: TrafficCar) -> void:
 	if phase != Phase.RACING:
 		return
+	audio.play_pass(car.position.x - player.position.x)
 	if session.register_pass():
 		show_notice("10 CLEAN PASSES! +1000", 2.0)
 		audio.play_effect(&"bonus")
@@ -215,6 +231,7 @@ func start_race() -> void:
 	$UI/HUD/Banner.text = "3"
 	$UI/HUD/Notice.text = ""
 	audio.stop_all()
+	effects.clear()
 	update_hud()
 
 
@@ -232,7 +249,9 @@ func begin_finish() -> void:
 	$UI/HUD/Banner.text = "TIME UP!"
 	$UI/HUD/Notice.text = ""
 	notice_remaining = 0.0
-	audio.stop_all()
+	audio.set_driving_effects(false, false)
+	audio.set_engine(false)
+	effects.clear()
 	audio.play_effect(&"finish")
 
 
@@ -252,6 +271,7 @@ func show_results(update_record: bool = true) -> void:
 	phase = Phase.RESULTS
 	paused = false
 	audio.stop_all()
+	effects.clear()
 	new_record = profile.record_score(session.difficulty, session.score()) if update_record else false
 	$UI/Results/Difficulty.text = session.DIFFICULTY_NAMES[session.difficulty]
 	$UI/Results/Score.text = "%06d" % session.score()
@@ -268,6 +288,7 @@ func show_title() -> void:
 	headlights.visible = false
 	hud.visible = false
 	audio.stop_all()
+	effects.clear()
 	road.reset_road()
 	traffic.reset_traffic()
 	player.reset_car(road, settings)
@@ -335,6 +356,7 @@ func pause_race() -> void:
 	# A resumed race requires fresh input, even if a finger remained down.
 	player.clear_input()
 	audio.stop_all()
+	effects.clear()
 	show_panel("Pause")
 
 
@@ -343,6 +365,7 @@ func resume_race() -> void:
 	show_panel("")
 	if phase in [Phase.RACING, Phase.PIT]:
 		audio.set_engine(true, phase == Phase.PIT)
+		update_driving_feedback(0.0)
 
 
 func end_race_from_pause() -> void:

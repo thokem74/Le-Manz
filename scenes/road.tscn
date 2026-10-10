@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 [ext_resource type="Script" path="res://scripts/road.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/road_strip.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/road_scenery.tscn" id="3"]
 [node name="Road" type="Node2D"]
 script = ExtResource("1")
 [node name="Rows" type="Node2D" parent="."]
@@ -324,3 +325,100 @@ position = Vector2(0, 1324)
 position = Vector2(0, 1332)
 [node name="Strip159" parent="Rows" instance=ExtResource("2")]
 position = Vector2(0, 1340)
+[node name="Scenery" type="Node2D" parent="."]
+[node name="Prop00" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop01" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop02" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop03" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop04" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop05" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop06" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop07" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop08" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop09" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop10" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop11" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop12" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop13" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop14" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop15" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop16" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop17" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop18" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop19" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop20" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop21" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop22" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop23" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop24" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop25" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop26" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop27" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop28" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop29" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop30" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop31" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop32" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop33" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop34" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop35" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop36" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop37" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop38" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop39" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop40" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop41" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop42" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop43" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop44" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop45" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop46" parent="Scenery" instance=ExtResource("3")]
+visible = false
+[node name="Prop47" parent="Scenery" instance=ExtResource("3")]
+visible = false

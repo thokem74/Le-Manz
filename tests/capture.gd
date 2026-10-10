@@ -26,12 +26,18 @@ func capture() -> void:
 	game.get_node("Profile").storage_path = "/tmp/le-manz-capture-profile.cfg"
 	viewport.add_child(game)
 	game.audio.set_enabled(false)
-	game.show_preview(view)
+	game.show_preview("ice" if view == "ice_slide" else view)
 	if view in ["crash1", "crash2", "pit"]:
 		game.start_race()
 		game.phase = game.Phase.RACING
 		game.begin_crash()
 		game.advance_pit(0.02 if view == "crash1" else (0.1 if view == "crash2" else 2.2))
+	if view == "ice_slide":
+		game.player.horizontal_offset = 0.0
+		game.player.press_control(0, 1)
+		game.player.advance(0.1)
+		game.player.release_control(0)
+	game.update_driving_feedback(0.0)
 	game.set_physics_process(false)
 	game.update_hud()
 	if view in ["road", "curves", "narrow", "ice", "night"]:
@@ -42,6 +48,11 @@ func capture() -> void:
 		game.traffic.cars[1].position.y = game.road.playfield_top + 42.0
 		game.traffic.cars[1].advance(0.0, game.road)
 		game.headlights.visible = view == "night"
+	if view in ["crash1", "crash2", "ice_slide"]:
+		await create_timer(0.1).timeout
+	if view == "pit":
+		# The preview advances race time manually; hide the already-expired burst.
+		game.effects.crash.visible = false
 	await process_frame
 	await RenderingServer.frame_post_draw
 	var image: Image = viewport.get_texture().get_image()
