@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="RaceSettings" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/race_settings.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+starting_seconds = PackedFloat32Array(180, 120, 90)
+bonus_seconds = PackedFloat32Array(90, 60, 45)

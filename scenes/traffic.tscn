@@ -1,0 +1,29 @@
+[gd_scene load_steps=3 format=3]
+[ext_resource type="Script" path="res://scripts/traffic.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/traffic_car.tscn" id="2"]
+[node name="Traffic" type="Node2D"]
+script = ExtResource("1")
+[node name="Car00" parent="." instance=ExtResource("2")]
+visible = false
+[node name="Car01" parent="." instance=ExtResource("2")]
+visible = false
+[node name="Car02" parent="." instance=ExtResource("2")]
+visible = false
+[node name="Car03" parent="." instance=ExtResource("2")]
+visible = false
+[node name="Car04" parent="." instance=ExtResource("2")]
+visible = false
+[node name="Car05" parent="." instance=ExtResource("2")]
+visible = false
+[node name="Car06" parent="." instance=ExtResource("2")]
+visible = false
+[node name="Car07" parent="." instance=ExtResource("2")]
+visible = false
+[node name="Car08" parent="." instance=ExtResource("2")]
+visible = false
+[node name="Car09" parent="." instance=ExtResource("2")]
+visible = false
+[node name="Car10" parent="." instance=ExtResource("2")]
+visible = false
+[node name="Car11" parent="." instance=ExtResource("2")]
+visible = false

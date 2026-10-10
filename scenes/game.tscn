@@ -1,0 +1,649 @@
+[gd_scene load_steps=11 format=3]
+[ext_resource type="Script" path="res://scripts/game.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/road.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/player_car.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/traffic.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/audio.tscn" id="5"]
+[ext_resource type="Theme" path="res://resources/retro_theme.tres" id="6"]
+[ext_resource type="Texture2D" path="res://assets/art/logo.svg" id="7"]
+[ext_resource type="Texture2D" path="res://assets/art/finish.svg" id="8"]
+[ext_resource type="Resource" path="res://resources/race_settings.tres" id="9"]
+[ext_resource type="Script" path="res://scripts/profile.gd" id="10"]
+[node name="LeManz" type="Node2D"]
+script = ExtResource("1")
+settings = ExtResource("9")
+[node name="Road" parent="." instance=ExtResource("2")]
+[node name="Traffic" parent="." instance=ExtResource("4")]
+[node name="Player" parent="." instance=ExtResource("3")]
+position = Vector2(168, 184)
+z_index = 2
+[node name="FinishLine" type="Sprite2D" parent="."]
+visible = false
+texture = ExtResource("8")
+position = Vector2(140, -16)
+[node name="Audio" parent="." instance=ExtResource("5")]
+[node name="Profile" type="Node" parent="."]
+script = ExtResource("10")
+[node name="UI" type="CanvasLayer" parent="."]
+[node name="HUD" type="Control" parent="UI"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 384.0
+offset_bottom = 240.0
+theme = ExtResource("6")
+mouse_filter = 2
+
+[node name="Instruments" type="ColorRect" parent="UI/HUD"]
+offset_left = 280.0
+offset_top = 0.0
+offset_right = 384.0
+offset_bottom = 240.0
+theme = ExtResource("6")
+mouse_filter = 2
+color = Color(0.13, 0.13, 0.20, 1)
+[node name="Divider" type="ColorRect" parent="UI/HUD"]
+offset_left = 280.0
+offset_top = 0.0
+offset_right = 282.0
+offset_bottom = 240.0
+theme = ExtResource("6")
+mouse_filter = 2
+color = Color(0.69, 0.24, 0.33, 1)
+[node name="Logo" type="Label" parent="UI/HUD"]
+offset_left = 286.0
+offset_top = 9.0
+offset_right = 378.0
+offset_bottom = 25.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "LE MANZ"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.85, 0.84, 0.43, 1)
+[node name="ScoreCaption" type="Label" parent="UI/HUD"]
+offset_left = 286.0
+offset_top = 30.0
+offset_right = 378.0
+offset_bottom = 40.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "SCORE"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.56, 0.50, 0.81, 1)
+[node name="TimeCaption" type="Label" parent="UI/HUD"]
+offset_left = 286.0
+offset_top = 66.0
+offset_right = 378.0
+offset_bottom = 76.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "TIME"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.56, 0.50, 0.81, 1)
+[node name="SpeedCaption" type="Label" parent="UI/HUD"]
+offset_left = 286.0
+offset_top = 104.0
+offset_right = 378.0
+offset_bottom = 114.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "KM/H"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.56, 0.50, 0.81, 1)
+[node name="PassCaption" type="Label" parent="UI/HUD"]
+offset_left = 286.0
+offset_top = 138.0
+offset_right = 378.0
+offset_bottom = 148.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "CLEAN PASSES"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.56, 0.50, 0.81, 1)
+[node name="Score" type="Label" parent="UI/HUD"]
+offset_left = 286.0
+offset_top = 43.0
+offset_right = 378.0
+offset_bottom = 61.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "000000"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 16
+[node name="Time" type="Label" parent="UI/HUD"]
+offset_left = 286.0
+offset_top = 78.0
+offset_right = 378.0
+offset_bottom = 98.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "120"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.85, 0.84, 0.43, 1)
+[node name="Speed" type="Label" parent="UI/HUD"]
+offset_left = 286.0
+offset_top = 116.0
+offset_right = 378.0
+offset_bottom = 134.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "180"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 16
+[node name="Passes" type="Label" parent="UI/HUD"]
+offset_left = 286.0
+offset_top = 151.0
+offset_right = 378.0
+offset_bottom = 163.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "0 / 10"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+[node name="Difficulty" type="Label" parent="UI/HUD"]
+offset_left = 286.0
+offset_top = 169.0
+offset_right = 378.0
+offset_bottom = 181.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "NORMAL"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.43, 0.80, 0.83, 1)
+[node name="Section" type="Label" parent="UI/HUD"]
+offset_left = 286.0
+offset_top = 185.0
+offset_right = 378.0
+offset_bottom = 195.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "OPEN ROAD"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+[node name="PauseButton" type="Button" parent="UI/HUD"]
+offset_left = 288.0
+offset_top = 204.0
+offset_right = 376.0
+offset_bottom = 232.0
+theme = ExtResource("6")
+text = "PAUSE"
+toggle_mode = false
+[node name="LeftHint" type="Label" parent="UI/HUD"]
+offset_left = 20.0
+offset_top = 223.0
+offset_right = 122.0
+offset_bottom = 233.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "< TAP LEFT"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+[node name="RightHint" type="Label" parent="UI/HUD"]
+offset_left = 158.0
+offset_top = 223.0
+offset_right = 260.0
+offset_bottom = 233.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "TAP RIGHT >"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+[node name="Notice" type="Label" parent="UI/HUD"]
+offset_left = 8.0
+offset_top = 12.0
+offset_right = 272.0
+offset_bottom = 32.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.85, 0.84, 0.43, 1)
+[node name="BannerBacking" type="ColorRect" parent="UI/HUD"]
+offset_left = 54.0
+offset_top = 72.0
+offset_right = 226.0
+offset_bottom = 110.0
+theme = ExtResource("6")
+mouse_filter = 2
+visible = false
+color = Color(0.13, 0.13, 0.20, 0.92)
+[node name="Banner" type="Label" parent="UI/HUD"]
+offset_left = 8.0
+offset_top = 76.0
+offset_right = 272.0
+offset_bottom = 106.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.93, 0.93, 0.80, 1)
+[node name="Pit" type="Panel" parent="UI/HUD"]
+offset_left = 0.0
+offset_top = 156.0
+offset_right = 26.0
+offset_bottom = 200.0
+theme = ExtResource("6")
+mouse_filter = 2
+[node name="PitLabel" type="Label" parent="UI/HUD/Pit"]
+offset_left = 1.0
+offset_top = 4.0
+offset_right = 25.0
+offset_bottom = 16.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "PIT"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+[node name="PitMark" type="Label" parent="UI/HUD/Pit"]
+offset_left = 1.0
+offset_top = 20.0
+offset_right = 25.0
+offset_bottom = 36.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "+"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.43, 0.80, 0.83, 1)
+[node name="Title" type="Panel" parent="UI"]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 372.0
+offset_bottom = 228.0
+theme = ExtResource("6")
+visible = false
+[node name="Heading" type="Label" parent="UI/Title"]
+offset_left = 8.0
+offset_top = 13.0
+offset_right = 352.0
+offset_bottom = 33.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.85, 0.84, 0.43, 1)
+[node name="Rule" type="ColorRect" parent="UI/Title"]
+offset_left = 16.0
+offset_top = 46.0
+offset_right = 344.0
+offset_bottom = 47.0
+theme = ExtResource("6")
+mouse_filter = 2
+color = Color(0.56, 0.50, 0.81, 1)
+[node name="Logo" type="TextureRect" parent="UI/Title"]
+offset_left = 97.0
+offset_top = 14.0
+offset_right = 263.0
+offset_bottom = 44.0
+theme = ExtResource("6")
+mouse_filter = 2
+texture = ExtResource("7")
+expand_mode = 1
+[node name="Subtitle" type="Label" parent="UI/Title"]
+offset_left = 10.0
+offset_top = 49.0
+offset_right = 350.0
+offset_bottom = 61.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "THE CLASSIC ROAD. A NEW RACE."
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.43, 0.80, 0.83, 1)
+[node name="DifficultyLabel" type="Label" parent="UI/Title"]
+offset_left = 10.0
+offset_top = 70.0
+offset_right = 350.0
+offset_bottom = 82.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "SELECT DIFFICULTY"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+[node name="Easy" type="Button" parent="UI/Title"]
+offset_left = 58.0
+offset_top = 88.0
+offset_right = 136.0
+offset_bottom = 114.0
+theme = ExtResource("6")
+text = "EASY"
+toggle_mode = true
+[node name="Normal" type="Button" parent="UI/Title"]
+offset_left = 141.0
+offset_top = 88.0
+offset_right = 219.0
+offset_bottom = 114.0
+theme = ExtResource("6")
+text = "NORMAL"
+toggle_mode = true
+[node name="Hard" type="Button" parent="UI/Title"]
+offset_left = 224.0
+offset_top = 88.0
+offset_right = 302.0
+offset_bottom = 114.0
+theme = ExtResource("6")
+text = "HARD"
+toggle_mode = true
+[node name="Record" type="Label" parent="UI/Title"]
+offset_left = 10.0
+offset_top = 119.0
+offset_right = 350.0
+offset_bottom = 131.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "BEST 000000 / TIME 120"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+[node name="Start" type="Button" parent="UI/Title"]
+offset_left = 99.0
+offset_top = 139.0
+offset_right = 261.0
+offset_bottom = 167.0
+theme = ExtResource("6")
+text = "START RACE >"
+toggle_mode = false
+[node name="Help" type="Button" parent="UI/Title"]
+offset_left = 58.0
+offset_top = 177.0
+offset_right = 177.0
+offset_bottom = 203.0
+theme = ExtResource("6")
+text = "HOW TO PLAY"
+toggle_mode = false
+[node name="Settings" type="Button" parent="UI/Title"]
+offset_left = 183.0
+offset_top = 177.0
+offset_right = 302.0
+offset_bottom = 203.0
+theme = ExtResource("6")
+text = "SETTINGS"
+toggle_mode = false
+[node name="Help" type="Panel" parent="UI"]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 372.0
+offset_bottom = 228.0
+theme = ExtResource("6")
+visible = false
+[node name="Heading" type="Label" parent="UI/Help"]
+offset_left = 8.0
+offset_top = 13.0
+offset_right = 352.0
+offset_bottom = 33.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "HOW TO PLAY"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.85, 0.84, 0.43, 1)
+[node name="Rule" type="ColorRect" parent="UI/Help"]
+offset_left = 16.0
+offset_top = 42.0
+offset_right = 344.0
+offset_bottom = 43.0
+theme = ExtResource("6")
+mouse_filter = 2
+color = Color(0.56, 0.50, 0.81, 1)
+[node name="Text" type="Label" parent="UI/Help"]
+offset_left = 12.0
+offset_top = 52.0
+offset_right = 348.0
+offset_bottom = 173.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "TAP LEFT / RIGHT: MOVE ONE LANE\n\n180 KM/H. NO GAS PEDAL NEEDED.\n\nPASS 10 CARS: +1000 POINTS\n20,000 POINTS: EXTRA TIME\n\nCRASH? PIT REPAIRS COST 4 SECONDS.\nTHE CLOCK KEEPS RUNNING!"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+[node name="Back" type="Button" parent="UI/Help"]
+offset_left = 115.0
+offset_top = 180.0
+offset_right = 245.0
+offset_bottom = 206.0
+theme = ExtResource("6")
+text = "BACK"
+toggle_mode = false
+[node name="Settings" type="Panel" parent="UI"]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 372.0
+offset_bottom = 228.0
+theme = ExtResource("6")
+visible = false
+[node name="Heading" type="Label" parent="UI/Settings"]
+offset_left = 8.0
+offset_top = 13.0
+offset_right = 352.0
+offset_bottom = 33.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "SETTINGS"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.85, 0.84, 0.43, 1)
+[node name="Rule" type="ColorRect" parent="UI/Settings"]
+offset_left = 16.0
+offset_top = 42.0
+offset_right = 344.0
+offset_bottom = 43.0
+theme = ExtResource("6")
+mouse_filter = 2
+color = Color(0.56, 0.50, 0.81, 1)
+[node name="Sound" type="Button" parent="UI/Settings"]
+offset_left = 77.0
+offset_top = 61.0
+offset_right = 283.0
+offset_bottom = 91.0
+theme = ExtResource("6")
+text = "SOUND: ON"
+toggle_mode = false
+[node name="Vibration" type="Button" parent="UI/Settings"]
+offset_left = 77.0
+offset_top = 103.0
+offset_right = 283.0
+offset_bottom = 133.0
+theme = ExtResource("6")
+text = "VIBRATION: ON"
+toggle_mode = false
+[node name="Caption" type="Label" parent="UI/Settings"]
+offset_left = 8.0
+offset_top = 145.0
+offset_right = 352.0
+offset_bottom = 157.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "OPTIONS ARE SAVED ON THIS DEVICE"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+[node name="Back" type="Button" parent="UI/Settings"]
+offset_left = 115.0
+offset_top = 180.0
+offset_right = 245.0
+offset_bottom = 206.0
+theme = ExtResource("6")
+text = "BACK"
+toggle_mode = false
+[node name="Pause" type="Panel" parent="UI"]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 372.0
+offset_bottom = 228.0
+theme = ExtResource("6")
+visible = false
+[node name="Heading" type="Label" parent="UI/Pause"]
+offset_left = 8.0
+offset_top = 13.0
+offset_right = 352.0
+offset_bottom = 33.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "RACE PAUSED"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.85, 0.84, 0.43, 1)
+[node name="Rule" type="ColorRect" parent="UI/Pause"]
+offset_left = 16.0
+offset_top = 42.0
+offset_right = 344.0
+offset_bottom = 43.0
+theme = ExtResource("6")
+mouse_filter = 2
+color = Color(0.56, 0.50, 0.81, 1)
+[node name="Caption" type="Label" parent="UI/Pause"]
+offset_left = 8.0
+offset_top = 61.0
+offset_right = 352.0
+offset_bottom = 73.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "TAKE A BREATHER. THE CLOCK IS STOPPED."
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+[node name="Resume" type="Button" parent="UI/Pause"]
+offset_left = 99.0
+offset_top = 89.0
+offset_right = 261.0
+offset_bottom = 119.0
+theme = ExtResource("6")
+text = "RESUME RACE >"
+toggle_mode = false
+[node name="Settings" type="Button" parent="UI/Pause"]
+offset_left = 99.0
+offset_top = 131.0
+offset_right = 261.0
+offset_bottom = 157.0
+theme = ExtResource("6")
+text = "SETTINGS"
+toggle_mode = false
+[node name="Quit" type="Button" parent="UI/Pause"]
+offset_left = 99.0
+offset_top = 173.0
+offset_right = 261.0
+offset_bottom = 199.0
+theme = ExtResource("6")
+text = "END RACE"
+toggle_mode = false
+[node name="Results" type="Panel" parent="UI"]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 372.0
+offset_bottom = 228.0
+theme = ExtResource("6")
+visible = false
+[node name="Heading" type="Label" parent="UI/Results"]
+offset_left = 8.0
+offset_top = 13.0
+offset_right = 352.0
+offset_bottom = 33.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "FINISH!"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.85, 0.84, 0.43, 1)
+[node name="Rule" type="ColorRect" parent="UI/Results"]
+offset_left = 16.0
+offset_top = 42.0
+offset_right = 344.0
+offset_bottom = 43.0
+theme = ExtResource("6")
+mouse_filter = 2
+color = Color(0.56, 0.50, 0.81, 1)
+[node name="Difficulty" type="Label" parent="UI/Results"]
+offset_left = 8.0
+offset_top = 51.0
+offset_right = 352.0
+offset_bottom = 63.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "NORMAL"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.43, 0.80, 0.83, 1)
+[node name="Score" type="Label" parent="UI/Results"]
+offset_left = 8.0
+offset_top = 70.0
+offset_right = 352.0
+offset_bottom = 96.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "000000"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.85, 0.84, 0.43, 1)
+[node name="Record" type="Label" parent="UI/Results"]
+offset_left = 8.0
+offset_top = 102.0
+offset_right = 352.0
+offset_bottom = 114.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "NEW BEST!"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+[node name="Stats" type="Label" parent="UI/Results"]
+offset_left = 8.0
+offset_top = 123.0
+offset_right = 352.0
+offset_bottom = 135.0
+theme = ExtResource("6")
+mouse_filter = 2
+text = "0 PASSES / 0 CRASHES"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 8
+[node name="Retry" type="Button" parent="UI/Results"]
+offset_left = 99.0
+offset_top = 148.0
+offset_right = 261.0
+offset_bottom = 176.0
+theme = ExtResource("6")
+text = "RACE AGAIN >"
+toggle_mode = false
+[node name="Title" type="Button" parent="UI/Results"]
+offset_left = 99.0
+offset_top = 184.0
+offset_right = 261.0
+offset_bottom = 210.0
+theme = ExtResource("6")
+text = "MAIN MENU"
+toggle_mode = false
