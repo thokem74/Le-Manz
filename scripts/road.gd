@@ -5,6 +5,7 @@ extends Node2D
 enum Section { NORMAL, CURVES, NARROW, ICE, NIGHT }
 
 const SECTION_NAMES: Array[String] = ["OPEN ROAD", "CURVES", "MOTORWAY", "ICE ROAD", "NIGHT RUN"]
+const LANE_WIDTH: float = 56.0
 const GRASS: Color = Color("55a049")
 const ASPHALT: Color = Color("6c6c6c")
 
@@ -13,6 +14,9 @@ var scroll: float = 0.0
 var width: float = 224.0
 var curve_strength: float = 0.0
 var headlight_x: float = 168.0
+var playfield_top: float = 64.0
+var playfield_bottom: float = 480.0
+var player_y: float = 400.0
 var rows: Array[RoadStrip] = []
 
 
@@ -38,11 +42,20 @@ func advance(delta: float, speed: float) -> void:
 
 
 func lane_x(coordinate: float, screen_y: float) -> float:
-	return 56.0 + coordinate * 56.0 + curve_offset(screen_y)
+	return centre_x(screen_y) + (coordinate - 1.5) * LANE_WIDTH
 
 
 func curve_offset(screen_y: float) -> float:
-	return sin((scroll + 240.0 - screen_y) / 100.0) * 19.0 * curve_strength
+	return sin((scroll + playfield_bottom - screen_y) / 100.0) * 19.0 * curve_strength
+
+
+func centre_x(screen_y: float) -> float:
+	return 140.0 + curve_offset(screen_y)
+
+
+func offset_limit() -> float:
+	# The full 16-pixel car stays on asphalt, with two pixels of edge clearance.
+	return maxf(0.0, width * 0.5 - 10.0)
 
 
 func minimum_lane() -> int:
@@ -55,7 +68,11 @@ func maximum_lane() -> int:
 
 func refresh() -> void:
 	for row in rows:
-		var screen_y: float = float(row.get_index() * 8)
+		var screen_y: float = playfield_top + float(row.get_index() * 8)
+		row.position.y = screen_y + 4.0
+		row.visible = screen_y < playfield_bottom
+		if not row.visible:
+			continue
 		var centre_x: float = 140.0 + curve_offset(screen_y)
 		var surface: Sprite2D = row.surface
 		surface.position.x = centre_x

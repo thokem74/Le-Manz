@@ -100,26 +100,32 @@ pool = '''[gd_scene load_steps=3 format=3]
 [node name="Traffic" type="Node2D"]
 script = ExtResource("1")
 '''
-for i in range(12):
+for i in range(24):
     pool += f'[node name="Car{i:02}" parent="." instance=ExtResource("2")]\nvisible = false\n'
 save("scenes/traffic.tscn", pool)
 
-road = '''[gd_scene load_steps=7 format=3]
-[ext_resource type="Script" path="res://scripts/road.gd" id="1"]
+# Reuse one inspectable strip scene instead of duplicating its visual structure.
+strip = '''[gd_scene load_steps=6 format=3]
+[ext_resource type="Script" path="res://scripts/road_strip.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/art/pixel.svg" id="2"]
 [ext_resource type="Texture2D" path="res://assets/art/kerb.svg" id="3"]
 [ext_resource type="Texture2D" path="res://assets/art/dash.svg" id="4"]
 [ext_resource type="Texture2D" path="res://assets/art/tree.svg" id="5"]
-[ext_resource type="Script" path="res://scripts/road_strip.gd" id="6"]
+[node name="RoadStrip" type="Node2D"]
+script = ExtResource("1")
+'''
+for name, resource, x, scale in [("Grass", 2, 140, 280), ("Surface", 2, 140, 224), ("LeftEdge", 3, 28, 1), ("RightEdge", 3, 252, 1), ("Dash0", 4, 84, 1), ("Dash1", 4, 140, 1), ("Dash2", 4, 196, 1), ("Scenery", 5, 8, 1)]:
+    strip += f'[node name="{name}" type="Sprite2D" parent="."]\ntexture = ExtResource("{resource}")\nposition = Vector2({x}, 0)\nscale = Vector2({scale}, 1)\n'
+save("scenes/road_strip.tscn", strip)
+road = '''[gd_scene load_steps=3 format=3]
+[ext_resource type="Script" path="res://scripts/road.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/road_strip.tscn" id="2"]
 [node name="Road" type="Node2D"]
 script = ExtResource("1")
 [node name="Rows" type="Node2D" parent="."]
 '''
-for i in range(30):
-    parent = f"Rows/Strip{i:02}"
-    road += f'[node name="Strip{i:02}" type="Node2D" parent="Rows"]\nscript = ExtResource("6")\nposition = Vector2(0, {i * 8 + 4})\n'
-    for name, resource, x, scale in [("Grass", 2, 140, 280), ("Surface", 2, 140, 224), ("LeftEdge", 3, 28, 1), ("RightEdge", 3, 252, 1), ("Dash0", 4, 84, 1), ("Dash1", 4, 140, 1), ("Dash2", 4, 196, 1), ("Scenery", 5, 8, 1)]:
-        road += f'[node name="{name}" type="Sprite2D" parent="{parent}"]\ntexture = ExtResource("{resource}")\nposition = Vector2({x}, 0)\nscale = Vector2({scale}, 1)\n'
+for i in range(160):
+    road += f'[node name="Strip{i:02}" parent="Rows" instance=ExtResource("2")]\nposition = Vector2(0, {64 + i * 8 + 4})\n'
 save("scenes/road.tscn", road)
 
 audio = '[gd_scene load_steps=8 format=3]\n[ext_resource type="Script" path="res://scripts/audio.gd" id="1"]\n'
@@ -149,7 +155,7 @@ settings = ExtResource("9")
 [node name="Road" parent="." instance=ExtResource("2")]
 [node name="Traffic" parent="." instance=ExtResource("4")]
 [node name="Player" parent="." instance=ExtResource("3")]
-position = Vector2(168, 184)
+position = Vector2(168, 400)
 z_index = 2
 [node name="FinishLine" type="Sprite2D" parent="."]
 visible = false
@@ -183,67 +189,68 @@ def button(name, parent, text, x, y, w, h=26, toggle=False):
 
 
 def panel(name, heading):
-    node(name, "Panel", "UI", 12, 12, 360, 216, "visible = false")
-    label("Heading", f"UI/{name}", heading, 8, 13, 344, 20, "0.85, 0.84, 0.43, 1", 16)
-    node("Rule", "ColorRect", f"UI/{name}", 16, 42, 328, 1, "color = Color(0.56, 0.50, 0.81, 1)")
+    node(name, "Panel", "UI", 12, 80, 256, 360, "visible = false")
+    label("Heading", f"UI/{name}", heading, 8, 18, 240, 24, "0.85, 0.84, 0.43, 1", 16)
+    node("Rule", "ColorRect", f"UI/{name}", 16, 50, 224, 1, "color = Color(0.56, 0.50, 0.81, 1)")
 
 
-node("HUD", "Control", "UI", 0, 0, 384, 240)
-node("Instruments", "ColorRect", "UI/HUD", 280, 0, 104, 240, "color = Color(0.13, 0.13, 0.20, 1)")
-node("Divider", "ColorRect", "UI/HUD", 280, 0, 2, 240, "color = Color(0.69, 0.24, 0.33, 1)")
-label("Logo", "UI/HUD", "LE MANZ", 286, 9, 92, 16, "0.85, 0.84, 0.43, 1")
-for name, text, y in [("ScoreCaption", "SCORE", 30), ("TimeCaption", "TIME", 66), ("SpeedCaption", "KM/H", 104), ("PassCaption", "CLEAN PASSES", 138)]:
-    label(name, "UI/HUD", text, 286, y, 92, 10, "0.56, 0.50, 0.81, 1")
-label("Score", "UI/HUD", "000000", 286, 43, 92, 18, size=16)
-label("Time", "UI/HUD", "120", 286, 78, 92, 20, "0.85, 0.84, 0.43, 1", 16)
-label("Speed", "UI/HUD", "180", 286, 116, 92, 18, size=16)
-label("Passes", "UI/HUD", "0 / 10", 286, 151, 92, 12)
-label("Difficulty", "UI/HUD", "NORMAL", 286, 169, 92, 12, "0.43, 0.80, 0.83, 1")
-label("Section", "UI/HUD", "OPEN ROAD", 286, 185, 92, 10)
-button("PauseButton", "UI/HUD", "PAUSE", 288, 204, 88, 28)
-label("LeftHint", "UI/HUD", "< TAP LEFT", 20, 223, 102, 10)
-label("RightHint", "UI/HUD", "TAP RIGHT >", 158, 223, 102, 10)
-label("Notice", "UI/HUD", "", 8, 12, 264, 20, "0.85, 0.84, 0.43, 1")
-node("BannerBacking", "ColorRect", "UI/HUD", 54, 72, 172, 38, "visible = false\ncolor = Color(0.13, 0.13, 0.20, 0.92)")
-label("Banner", "UI/HUD", "", 8, 76, 264, 30, "0.93, 0.93, 0.80, 1", 16)
-node("Pit", "Panel", "UI/HUD", 0, 156, 26, 44, "mouse_filter = 2")
+node("HUD", "Control", "UI", 0, 0, 280, 480)
+node("Instruments", "ColorRect", "UI/HUD", 0, 0, 280, 64, "color = Color(0.13, 0.13, 0.20, 1)")
+node("Divider", "ColorRect", "UI/HUD", 0, 62, 280, 2, "color = Color(0.69, 0.24, 0.33, 1)")
+label("ScoreCaption", "UI/HUD", "SCORE", 8, 4, 100, 10, "0.56, 0.50, 0.81, 1")
+label("Score", "UI/HUD", "000000", 8, 16, 100, 18, size=16)
+label("TimeCaption", "UI/HUD", "TIME", 112, 4, 64, 10, "0.56, 0.50, 0.81, 1")
+label("Time", "UI/HUD", "120", 112, 16, 64, 18, "0.85, 0.84, 0.43, 1", 16)
+button("PauseButton", "UI/HUD", "PAUSE", 190, 4, 82, 30)
+label("SpeedCaption", "UI/HUD", "KM/H", 8, 35, 38, 10)
+label("Speed", "UI/HUD", "180", 48, 35, 30, 10)
+label("PassCaption", "UI/HUD", "CLEAN", 88, 35, 36, 10)
+label("Passes", "UI/HUD", "0 / 10", 130, 35, 48, 10)
+label("Difficulty", "UI/HUD", "NORMAL", 190, 36, 82, 10, "0.43, 0.80, 0.83, 1")
+label("Section", "UI/HUD", "OPEN ROAD", 8, 49, 264, 10)
+label("LeftHint", "UI/HUD", "< HOLD / TAP", 8, 462, 126, 12)
+label("RightHint", "UI/HUD", "HOLD / TAP >", 146, 462, 126, 12)
+node("NoticeBacking", "ColorRect", "UI/HUD", 8, 70, 264, 24, "visible = false\ncolor = Color(0.13, 0.13, 0.20, 0.94)")
+label("Notice", "UI/HUD", "", 8, 70, 264, 24, "0.85, 0.84, 0.43, 1")
+node("BannerBacking", "ColorRect", "UI/HUD", 54, 180, 172, 38, "visible = false\ncolor = Color(0.13, 0.13, 0.20, 0.92)")
+label("Banner", "UI/HUD", "", 8, 184, 264, 30, "0.93, 0.93, 0.80, 1", 16)
+node("Pit", "Panel", "UI/HUD", 0, 372, 26, 44, "mouse_filter = 2")
 label("PitLabel", "UI/HUD/Pit", "PIT", 1, 4, 24)
 label("PitMark", "UI/HUD/Pit", "+", 1, 20, 24, 16, "0.43, 0.80, 0.83, 1", 16)
 
 panel("Title", "")
-main = main.replace('parent="UI/Title"]\noffset_left = 16.0\noffset_top = 42.0\noffset_right = 344.0\noffset_bottom = 43.0', 'parent="UI/Title"]\noffset_left = 16.0\noffset_top = 46.0\noffset_right = 344.0\noffset_bottom = 47.0')
-node("Logo", "TextureRect", "UI/Title", 97, 14, 166, 30, 'texture = ExtResource("7")\nexpand_mode = 1')
-label("Subtitle", "UI/Title", "THE CLASSIC ROAD. A NEW RACE.", 10, 49, 340, 12, "0.43, 0.80, 0.83, 1")
-label("DifficultyLabel", "UI/Title", "SELECT DIFFICULTY", 10, 70, 340)
-for name, x in [("Easy", 58), ("Normal", 141), ("Hard", 224)]:
-    button(name, "UI/Title", name.upper(), x, 88, 78, 26, True)
-label("Record", "UI/Title", "BEST 000000 / TIME 120", 10, 119, 340)
-button("Start", "UI/Title", "START RACE >", 99, 139, 162, 28)
-button("Help", "UI/Title", "HOW TO PLAY", 58, 177, 119)
-button("Settings", "UI/Title", "SETTINGS", 183, 177, 119)
+node("Logo", "TextureRect", "UI/Title", 45, 16, 166, 30, 'texture = ExtResource("7")\nexpand_mode = 1')
+label("Subtitle", "UI/Title", "THE CLASSIC ROAD.\nA NEW RACE.", 8, 58, 240, 26, "0.43, 0.80, 0.83, 1")
+label("DifficultyLabel", "UI/Title", "SELECT DIFFICULTY", 8, 94, 240)
+for name, x in [("Easy", 16), ("Normal", 92), ("Hard", 168)]:
+    button(name, "UI/Title", name.upper(), x, 114, 72, 32, True)
+label("Record", "UI/Title", "BEST 000000 / TIME 120", 8, 156, 240)
+button("Start", "UI/Title", "START RACE >", 36, 190, 184, 36)
+button("Help", "UI/Title", "HOW TO PLAY", 36, 240, 184, 36)
+button("Settings", "UI/Title", "SETTINGS", 36, 290, 184, 36)
 
 panel("Help", "HOW TO PLAY")
-label("Text", "UI/Help", "TAP LEFT / RIGHT: MOVE ONE LANE\n\n180 KM/H. NO GAS PEDAL NEEDED.\n\nPASS 10 CARS: +1000 POINTS\n20,000 POINTS: EXTRA TIME\n\nCRASH? PIT REPAIRS COST 4 SECONDS.\nTHE CLOCK KEEPS RUNNING!", 12, 52, 336, 121)
-button("Back", "UI/Help", "BACK", 115, 180, 130)
+label("Text", "UI/Help", "HOLD LEFT / RIGHT: STEER\nQUICK TAP: MOVE ONE LANE\n\nICE: RELEASE TO SLIDE.\nCOUNTERSTEER TO BRAKE.\n\n180 KM/H. NO GAS PEDAL.\n10 CLEAN PASSES: +1000\n20,000 POINTS: EXTRA TIME\n\nPIT REPAIR: 4 SECONDS.\nTHE CLOCK KEEPS RUNNING!", 8, 64, 240, 212)
+button("Back", "UI/Help", "BACK", 36, 304, 184, 36)
 
 panel("Settings", "SETTINGS")
-button("Sound", "UI/Settings", "SOUND: ON", 77, 61, 206, 30)
-button("Vibration", "UI/Settings", "VIBRATION: ON", 77, 103, 206, 30)
-label("Caption", "UI/Settings", "OPTIONS ARE SAVED ON THIS DEVICE", 8, 145, 344)
-button("Back", "UI/Settings", "BACK", 115, 180, 130)
+button("Sound", "UI/Settings", "SOUND: ON", 24, 88, 208, 40)
+button("Vibration", "UI/Settings", "VIBRATION: ON", 24, 150, 208, 40)
+label("Caption", "UI/Settings", "OPTIONS ARE SAVED\nON THIS DEVICE", 8, 214, 240, 32)
+button("Back", "UI/Settings", "BACK", 36, 304, 184, 36)
 
 panel("Pause", "RACE PAUSED")
-label("Caption", "UI/Pause", "TAKE A BREATHER. THE CLOCK IS STOPPED.", 8, 61, 344)
-button("Resume", "UI/Pause", "RESUME RACE >", 99, 89, 162, 30)
-button("Settings", "UI/Pause", "SETTINGS", 99, 131, 162, 26)
-button("Quit", "UI/Pause", "END RACE", 99, 173, 162, 26)
+label("Caption", "UI/Pause", "TAKE A BREATHER.\nTHE CLOCK IS STOPPED.", 8, 66, 240, 32)
+button("Resume", "UI/Pause", "RESUME RACE >", 36, 124, 184, 40)
+button("Settings", "UI/Pause", "SETTINGS", 36, 190, 184, 40)
+button("Quit", "UI/Pause", "END RACE", 36, 270, 184, 40)
 
 panel("Results", "FINISH!")
-label("Difficulty", "UI/Results", "NORMAL", 8, 51, 344, 12, "0.43, 0.80, 0.83, 1")
-label("Score", "UI/Results", "000000", 8, 70, 344, 26, "0.85, 0.84, 0.43, 1", 24)
-label("Record", "UI/Results", "NEW BEST!", 8, 102, 344, 12)
-label("Stats", "UI/Results", "0 PASSES / 0 CRASHES", 8, 123, 344, 12)
-button("Retry", "UI/Results", "RACE AGAIN >", 99, 148, 162, 28)
-button("Title", "UI/Results", "MAIN MENU", 99, 184, 162, 26)
+label("Difficulty", "UI/Results", "NORMAL", 8, 68, 240, 12, "0.43, 0.80, 0.83, 1")
+label("Score", "UI/Results", "000000", 8, 98, 240, 30, "0.85, 0.84, 0.43, 1", 24)
+label("Record", "UI/Results", "NEW BEST!", 8, 144, 240, 12)
+label("Stats", "UI/Results", "0 PASSES / 0 CRASHES", 8, 174, 240, 12)
+button("Retry", "UI/Results", "RACE AGAIN >", 36, 228, 184, 40)
+button("Title", "UI/Results", "MAIN MENU", 36, 294, 184, 40)
 save("scenes/game.tscn", main)
-print("Generated reusable car, road, traffic, audio and game scenes.")
+print("Generated reusable portrait car, road, traffic, audio and game scenes.")

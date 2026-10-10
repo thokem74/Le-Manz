@@ -32,7 +32,7 @@ func _ready() -> void:
 	traffic.overtaken.connect(_on_overtaken)
 	connect_buttons()
 	audio.set_enabled(profile.sound_enabled)
-	player.reset_car(road, settings.lane_change_seconds)
+	player.reset_car(road, settings)
 	show_title()
 	apply_safe_area()
 	get_viewport().size_changed.connect(apply_safe_area)
@@ -136,7 +136,7 @@ func advance_race(delta: float) -> void:
 func advance_pit(delta: float) -> void:
 	phase_elapsed += delta
 	var progress: float = phase_elapsed / settings.repair_seconds
-	var pit_position := Vector2(13.0, 184.0)
+	var pit_position := Vector2(13.0, road.player_y)
 	if progress < 0.18:
 		player.sprite.frame = 1 + int(phase_elapsed * 12.0) % 2
 	elif progress < 0.45:
@@ -147,11 +147,10 @@ func advance_pit(delta: float) -> void:
 		player.modulate.a = 0.5 if int(phase_elapsed * 8.0) % 2 == 0 else 1.0
 	else:
 		player.modulate.a = 1.0
-		var exit_position := Vector2(road.lane_x(1.0, 184.0), 184.0)
+		var exit_position := Vector2(road.lane_x(1.0, road.player_y), road.player_y)
 		player.position = pit_position.lerp(exit_position, minf(1.0, (progress - 0.78) / 0.22))
 	if phase_elapsed >= settings.repair_seconds:
-		player.lane = 1
-		player.lane_coordinate = 1.0
+		player.horizontal_offset = -28.0
 		player.clear_input()
 		player.sprite.frame = 0
 		player.modulate = Color.WHITE
@@ -201,7 +200,8 @@ func start_race() -> void:
 	session.start(profile.difficulty)
 	road.reset_road()
 	traffic.reset_traffic()
-	player.reset_car(road, settings.lane_change_seconds)
+	player.reset_car(road, settings)
+	player.visible = true
 	finish_line.visible = false
 	headlights.visible = false
 	protection_remaining = 0.0
@@ -226,7 +226,7 @@ func begin_finish() -> void:
 	player.modulate = Color.WHITE
 	headlights.visible = false
 	traffic.reset_traffic()
-	finish_line.position = Vector2(140.0 + road.curve_offset(-16.0), -16.0)
+	finish_line.position = Vector2(road.centre_x(road.playfield_top - 16.0), road.playfield_top - 16.0)
 	finish_line.scale.x = road.width / 224.0
 	finish_line.visible = true
 	$UI/HUD/Banner.text = "TIME UP!"
@@ -239,14 +239,16 @@ func begin_finish() -> void:
 func advance_finish(delta: float) -> void:
 	phase_elapsed += delta
 	road.advance(delta, settings.scroll_speed)
-	player.position.x = road.lane_x(player.lane_coordinate, 184.0)
+	player.position.x = road.centre_x(road.player_y) + player.horizontal_offset
 	finish_line.position.y += settings.scroll_speed * delta
 	finish_line.position.x = 140.0 + road.curve_offset(finish_line.position.y)
-	if phase_elapsed >= 2.2:
+	if phase_elapsed >= maxf(2.2, (road.player_y - road.playfield_top + 40.0) / settings.scroll_speed):
 		show_results()
 
 
 func show_results(update_record: bool = true) -> void:
+	player.clear_input()
+	player.visible = false
 	phase = Phase.RESULTS
 	paused = false
 	audio.stop_all()
@@ -268,7 +270,8 @@ func show_title() -> void:
 	audio.stop_all()
 	road.reset_road()
 	traffic.reset_traffic()
-	player.reset_car(road, settings.lane_change_seconds)
+	player.reset_car(road, settings)
+	player.visible = false
 	show_panel("Title")
 	refresh_title()
 
@@ -329,8 +332,8 @@ func pause_race() -> void:
 	if phase not in [Phase.COUNTDOWN, Phase.RACING, Phase.PIT, Phase.FINISH] or paused:
 		return
 	paused = true
-	# Freeze the current move in place; discard only the queued next tap.
-	player.buffered_direction = 0
+	# A resumed race requires fresh input, even if a finger remained down.
+	player.clear_input()
 	audio.stop_all()
 	show_panel("Pause")
 
@@ -363,10 +366,32 @@ func update_hud() -> void:
 	if phase == Phase.PIT:
 		$UI/HUD/Banner.text = "PIT %.1fS" % maxf(0.0, settings.repair_seconds - phase_elapsed)
 	$UI/HUD/BannerBacking.visible = not $UI/HUD/Banner.text.is_empty()
+	$UI/HUD/NoticeBacking.visible = not $UI/HUD/Notice.text.is_empty()
 	var warning: bool = (
 		session.remaining_seconds <= 10.0 and int(session.remaining_seconds * 4.0) % 2 == 0
 	)
 	$UI/HUD/Time.modulate = Color("ff6b6b") if warning else Color.WHITE
+
+
+func control_identifier(event: InputEvent) -> int:
+	if event is InputEventScreenTouch:
+		return event.index
+	if event is InputEventMouseButton:
+		return -1
+	if event is InputEventKey:
+		return -int(event.keycode) - 10
+	return -2
+
+
+func _input(event: InputEvent) -> void:
+	# Releases must reach a tracked control even when a menu consumes the event.
+	if event is InputEventScreenTouch and (not event.pressed or event.canceled):
+		player.release_control(control_identifier(event), not event.canceled)
+	elif event is InputEventMouseButton and not event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT and event.device != InputEvent.DEVICE_ID_EMULATION:
+			player.release_control(-1)
+	elif event is InputEventKey and not event.pressed:
+		player.release_control(control_identifier(event))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -380,20 +405,24 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 	if phase != Phase.RACING or paused:
 		return
-	if event is InputEventScreenTouch and event.pressed:
-		player.request_lane(-1 if event.position.x < 192.0 else 1)
-		get_viewport().set_input_as_handled()
+	var direction: int = 0
+	var midpoint: float = get_viewport_rect().size.x * 0.5
+	if event is InputEventScreenTouch and event.pressed and not event.canceled:
+		direction = -1 if event.position.x < midpoint else 1
 	elif (
 		event is InputEventMouseButton and event.pressed
 		and event.button_index == MOUSE_BUTTON_LEFT
 		and event.device != InputEvent.DEVICE_ID_EMULATION
 	):
-		player.request_lane(-1 if event.position.x < 192.0 else 1)
+		direction = -1 if event.position.x < midpoint else 1
 	elif event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode in [KEY_LEFT, KEY_A]:
-			player.request_lane(-1)
+			direction = -1
 		elif event.keycode in [KEY_RIGHT, KEY_D]:
-			player.request_lane(1)
+			direction = 1
+	if direction != 0:
+		player.press_control(control_identifier(event), direction)
+		get_viewport().set_input_as_handled()
 
 
 func _notification(what: int) -> void:
@@ -413,21 +442,37 @@ func _notification(what: int) -> void:
 
 
 func apply_safe_area() -> void:
-	if OS.get_name() != "Android":
-		return
-	# The aspect-preserving viewport normally letterboxes away from a camera cutout.
-	# Keep the pause control inside the safe rectangle even on less usual displays.
-	var safe_pixels: Rect2i = DisplayServer.get_display_safe_area()
-	if safe_pixels.size.x <= 0 or safe_pixels.size.y <= 0:
-		return
-	var screen_to_canvas: Transform2D = get_viewport().get_screen_transform().affine_inverse()
-	var safe_canvas: Rect2 = screen_to_canvas * Rect2(safe_pixels)
-	var pause_button: Button = $UI/HUD/PauseButton
-	pause_button.position.x = minf(288.0, safe_canvas.end.x - 96.0)
-	pause_button.position.y = minf(204.0, safe_canvas.end.y - 36.0)
+	var canvas: Vector2 = get_viewport_rect().size
+	var safe := Rect2(Vector2.ZERO, canvas)
+	if OS.get_name() == "Android":
+		var safe_pixels: Rect2i = DisplayServer.get_display_safe_area()
+		if safe_pixels.size.x > 0 and safe_pixels.size.y > 0:
+			var inverse: Transform2D = get_viewport().get_screen_transform().affine_inverse()
+			safe = safe.intersection(inverse * Rect2(safe_pixels))
+	# Expand vertically on tall phones. Centre the fixed-width pixel road on tablets.
+	var left: float = (canvas.x - 280.0) * 0.5
+	position.x = left
+	road.playfield_top = maxf(0.0, safe.position.y) + 64.0
+	road.playfield_bottom = safe.end.y
+	road.player_y = road.playfield_bottom - 80.0
+	road.refresh()
+	$UI/HUD.position = Vector2(left, maxf(0.0, safe.position.y))
+	$UI/HUD.size = Vector2(280.0, safe.size.y)
+	$UI/HUD/LeftHint.position.y = safe.size.y - 18.0
+	$UI/HUD/RightHint.position.y = safe.size.y - 18.0
+	$UI/HUD/Pit.position.y = road.player_y - $UI/HUD.position.y - 28.0
+	$UI/HUD/Banner.position.y = safe.size.y * 0.42
+	$UI/HUD/BannerBacking.position.y = $UI/HUD/Banner.position.y - 4.0
+	for name in ["Title", "Help", "Settings", "Pause", "Results"]:
+		get_node("UI/" + name).position = Vector2(left + 12.0, safe.position.y + (safe.size.y - 360.0) * 0.5)
+	if phase != Phase.PIT:
+		player.position = Vector2(road.centre_x(road.player_y) + player.horizontal_offset, road.player_y)
 
 
 func show_preview(view: String) -> void:
+	if view == "countdown":
+		start_race()
+		return
 	if view in ["title", "help", "settings", "results", "pause"]:
 		match view:
 			"help":
@@ -456,5 +501,6 @@ func show_preview(view: String) -> void:
 		road.section = maxi(0, section_index)
 		session.elapsed_seconds = road.section * settings.section_seconds + 5.0
 		road.advance(1.0, settings.scroll_speed)
+		player.advance(0.0)
 		traffic.try_spawn(road)
 		$UI/HUD/Banner.text = ""

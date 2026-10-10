@@ -64,7 +64,7 @@ func advance(
 		if not car.active:
 			continue
 		car.advance(delta, road)
-		if car.wants_change and car.position.y > 45.0 and car.position.y < 90.0:
+		if car.wants_change and car.position.y > road.playfield_top + 45.0 and car.position.y < road.playfield_top + 90.0:
 			car.wants_change = false
 			var direction: int = -1 if rng.randf() < 0.5 else 1
 			var destination: int = clampi(
@@ -72,22 +72,22 @@ func advance(
 			)
 			if road.section != RaceRoad.Section.NARROW and lane_clear(destination, car.position.y, car):
 				car.signal_lane_change(destination)
-		if not car.passed and car.position.y > 210.0:
+		if not car.passed and car.position.y > road.player_y + 26.0:
 			car.passed = true
 			if allow_passes:
 				overtaken.emit()
-		if car.position.y > 270.0:
+		if car.position.y > road.playfield_bottom + 30.0:
 			car.deactivate()
 
 
 func try_spawn(road: RaceRoad) -> void:
 	# One car per row, with a full reaction gap. Narrow sections never form a wall.
 	for car in cars:
-		if car.active and car.position.y < 26.0:
+		if car.active and car.position.y < road.playfield_top + 26.0:
 			return
 	var available_lanes: Array[int] = []
 	for candidate in range(road.minimum_lane(), road.maximum_lane() + 1):
-		if lane_clear(candidate, -28.0):
+		if lane_clear(candidate, road.playfield_top - 28.0):
 			available_lanes.append(candidate)
 	if available_lanes.is_empty():
 		return
@@ -98,7 +98,8 @@ func try_spawn(road: RaceRoad) -> void:
 			if road.section == RaceRoad.Section.NARROW:
 				speed = 100.0
 			car.activate(lane, speed, CAR_COLOURS[rng.randi_range(0, 3)], rng.randf() < 0.22)
-			car.position.x = road.lane_x(float(lane), -28.0)
+			car.position.y = road.playfield_top - 28.0
+			car.position.x = road.lane_x(float(lane), car.position.y)
 			return
 
 

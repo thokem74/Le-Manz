@@ -29,6 +29,7 @@ func run() -> void:
 	check_lifecycle(game)
 	check_inputs(game)
 	check_traffic(game)
+	check_portrait_geometry()
 	check_clean_run_thresholds(game)
 	check_difficulty_playthroughs(game)
 	game.free()
@@ -102,40 +103,88 @@ func check_persistence() -> void:
 func check_steering(game: Node) -> void:
 	game.start_race()
 	var car: PlayerCar = game.player
-	car.request_lane(-1)
-	car.advance(0.09)
-	check(is_equal_approx(car.lane_coordinate, 1.5), "Lane move is smooth at half duration")
-	car.request_lane(-1)
-	car.request_lane(1)
-	car.advance(0.09)
-	check(car.lane == 1 and car.moving and car.move_to == 0, "Only one tap buffers during a move")
+	car.press_control(0, -1)
+	car.advance(0.1)
+	check(is_equal_approx(car.horizontal_offset, 10.0), "Press begins continuous movement immediately")
+	car.release_control(0)
 	car.advance(0.18)
-	check(car.lane == 0 and not car.moving, "Buffered tap moves exactly one additional lane")
-	car.request_lane(-1)
-	check(not car.moving, "Left boundary clamps")
-	car.request_lane(1)
-	car.advance(0.07)
-	game.road.section = RaceRoad.Section.NARROW
-	car.constrain_to_road()
+	check(is_equal_approx(car.horizontal_offset, -28.0), "Quick tap completes one lane from press position")
+	car.press_control(0, 1)
+	car.advance(0.2)
+	car.release_control(0)
+	var stopped: float = car.horizontal_offset
+	car.advance(0.2)
+	check(is_equal_approx(car.horizontal_offset, stopped) and not car.moving, "Dry hold releases without snapping")
+	car.request_tap(-1, car.horizontal_offset)
+	car.request_tap(1, car.horizontal_offset)
+	car.request_tap(-1, car.horizontal_offset)
 	car.advance(0.18)
-	check(car.lane == 1 and car.buffered_direction == 0, "Narrowing smoothly guides to middle lanes")
-	car.request_lane(-1)
-	check(not car.moving, "Narrow-road boundary clamps")
-	game.road.section = RaceRoad.Section.ICE
-	car.request_lane(1)
+	check(car.moving and car.buffered_direction == 0, "Exactly one tap queues")
 	car.advance(0.18)
-	check(car.lane == 2, "Ice keeps the same steering duration")
-	car.request_lane(1)
-	car.advance(0.09)
+	check(is_equal_approx(car.horizontal_offset, stopped), "Queued opposite tap returns one lane")
+	car.request_tap(-1, car.horizontal_offset)
+	car.press_control(0, 1)
+	car.advance(0.2)
+	check(not car.moving and car.buffered_direction == 0, "Hold cancels tap automation")
 	car.clear_input()
-	check(not car.moving and car.buffered_direction == 0 and car.lane_coordinate == float(car.lane), "Cancelled movement settles on a lane")
-	game.start_race()
-	game.phase = game.Phase.RACING
-	game.session.elapsed_seconds = 19.99
-	car.request_lane(-1)
-	car.advance(0.09)
-	game._physics_process(0.02)
-	check(car.moving and car.lane_coordinate < 1.5 and car.lane_coordinate > 1.0, "A wide-road section change does not interrupt steering")
+	car.press_control(0, -1)
+	car.advance(2.0)
+	check(is_equal_approx(car.horizontal_offset, -102.0) and car.lateral_velocity == 0.0, "Full car clamps at road edge")
+	game.road.section = RaceRoad.Section.NARROW
+	for step in range(60):
+		game.road.advance(1.0 / 60.0, 120.0)
+		car.advance(1.0 / 60.0)
+		check(absf(car.horizontal_offset) <= game.road.offset_limit(), "Narrowing keeps full car inside road")
+	check(is_equal_approx(car.horizontal_offset, -46.0), "Narrow road preserves free position rather than lane snapping")
+	car.clear_input()
+	game.road.reset_road()
+	game.road.section = RaceRoad.Section.ICE
+	car.horizontal_offset = -40.0
+	car.press_control(0, 1)
+	for step in range(15):
+		car.advance(1.0 / 60.0)
+	check(is_equal_approx(car.lateral_velocity, 180.0), "Ice reaches configured lateral speed gradually")
+	car.release_control(0)
+	stopped = car.horizontal_offset
+	for step in range(18):
+		car.advance(1.0 / 60.0)
+	check(is_equal_approx(car.horizontal_offset - stopped, 27.0), "Ice release coasts a gentle 27 pixels")
+	check(is_zero_approx(car.lateral_velocity), "Ice drift comes to rest")
+	car.horizontal_offset = 0.0
+	car.lateral_velocity = 180.0
+	car.press_control(0, -1)
+	car.advance(0.2)
+	check(is_zero_approx(car.lateral_velocity), "Countersteering brakes slide")
+	car.advance(0.1)
+	check(car.lateral_velocity < 0.0, "Countersteering reverses slide")
+	car.clear_input()
+	car.horizontal_offset = 0.0
+	car.press_control(0, 1)
+	car.advance(0.1)
+	car.release_control(0)
+	car.advance(0.30)
+	check(is_equal_approx(car.horizontal_offset, 56.0) and car.lateral_velocity == 0.0, "Ice tap settles precisely after 0.30 seconds")
+	car.press_control(0, -1)
+	car.advance(0.2)
+	stopped = car.horizontal_offset
+	car.clear_input()
+	car.advance(0.2)
+	check(is_equal_approx(car.horizontal_offset, stopped), "Clearing input stops momentum without snapping")
+	car.horizontal_offset = 0.0
+	car.lateral_velocity = 180.0
+	car.advance(0.5)
+	check(is_equal_approx(car.horizontal_offset, 27.0), "Delayed frame preserves exact ice stopping distance")
+	car.request_tap(1, 0.0)
+	car.advance(0.15)
+	var halfway: float = car.horizontal_offset
+	game.road.section = RaceRoad.Section.NIGHT
+	car.advance(0.01)
+	check(car.horizontal_offset >= halfway and car.tap_on_ice, "Ice tap keeps its easing when the road changes")
+	car.clear_input()
+	game.road.section = RaceRoad.Section.CURVES
+	game.road.advance(1.0, 120.0)
+	car.advance(0.0)
+	check(is_equal_approx(car.position.x, game.road.centre_x(car.position.y) + car.horizontal_offset), "Curves carry road-relative car position")
 
 
 func check_lifecycle(game: Node) -> void:
@@ -165,7 +214,7 @@ func check_lifecycle(game: Node) -> void:
 	game.session.remaining_seconds = 0.02
 	game._physics_process(0.03)
 	check(game.phase == game.Phase.FINISH, "Expiry during pit enters finish")
-	game._physics_process(2.3)
+	game._physics_process(10.0)
 	check(game.phase == game.Phase.RESULTS and game.get_node("UI/Results").visible, "Finish displays results")
 	game.start_race()
 	check(game.session.crashes == 0 and not game.finish_line.visible and game.player.sprite.frame == 0, "Retry clears crash and finish visuals")
@@ -174,14 +223,14 @@ func check_lifecycle(game: Node) -> void:
 	check(game.paused, "Background notification pauses gameplay")
 	game.resume_race()
 	check(not game.paused, "Explicit resume restores gameplay")
-	game.player.request_lane(1)
-	game.player.advance(0.09)
-	game.player.request_lane(-1)
+	game.player.press_control(0, 1)
+	game.player.advance(0.2)
+	var position_before_pause: float = game.player.horizontal_offset
 	game.pause_race()
-	check(game.player.moving and game.player.buffered_direction == 0, "Pause freezes current movement and clears next tap")
+	check(not game.player.moving and game.player.presses.is_empty() and game.player.lateral_velocity == 0.0, "Pause clears all steering state")
 	game.resume_race()
-	game.player.advance(0.09)
-	check(not game.player.moving, "Resume completes the frozen lane change")
+	game.player.advance(0.2)
+	check(is_equal_approx(game.player.horizontal_offset, position_before_pause), "Resume requires fresh input")
 	game._notification(Node.NOTIFICATION_WM_GO_BACK_REQUEST)
 	check(game.paused, "Android Back pauses an active race")
 	game.open_settings("Pause")
@@ -197,43 +246,80 @@ func check_inputs(game: Node) -> void:
 	game.start_race()
 	game.phase = game.Phase.RACING
 	var touch := InputEventScreenTouch.new()
-	touch.position = Vector2(30, 120)
-	touch.pressed = false
-	game._unhandled_input(touch)
-	check(not game.player.moving, "Release does not move a lane")
+	touch.position = Vector2(30, 200)
 	touch.pressed = true
 	game._unhandled_input(touch)
-	check(game.player.move_to == 1, "Left-half press moves left")
+	game.player.advance(0.05)
+	check(game.player.horizontal_offset < 28.0, "Left-half press moves left")
 	var second := InputEventScreenTouch.new()
 	second.index = 1
-	second.position = Vector2(300, 120)
+	second.position = Vector2(game.get_viewport_rect().size.x - 30, 200)
 	second.pressed = true
 	game._unhandled_input(second)
-	game.player.advance(0.18)
-	game.player.advance(0.18)
-	check(game.player.lane == 2, "Second finger buffers one right change")
-	var drag := InputEventScreenDrag.new()
-	drag.position = Vector2(300, 130)
-	game._unhandled_input(drag)
-	check(not game.player.moving, "Dragging does not repeat steering")
-	var key := InputEventKey.new()
-	key.keycode = KEY_RIGHT
-	key.pressed = true
-	key.echo = true
-	game._unhandled_input(key)
-	check(not game.player.moving, "Keyboard repeat is ignored")
+	var before: float = game.player.horizontal_offset
+	game.player.advance(0.05)
+	check(is_equal_approx(game.player.horizontal_offset, before), "Opposite touches cancel movement")
+	var third := InputEventScreenTouch.new()
+	third.index = 2
+	third.position = Vector2(30, 200)
+	third.pressed = true
+	game._unhandled_input(third)
+	game.player.advance(0.05)
+	check(is_equal_approx(game.player.horizontal_offset, before), "Opposite sides cancel even with three fingers")
+	third.pressed = false
+	game._input(third)
+	touch.pressed = false
+	touch.position = Vector2(220, 10)
+	game._input(touch)
+	check(not game.player.moving, "Overlapping release over HUD does not create a tap")
+	game.player.advance(0.2)
+	check(game.player.horizontal_offset > before, "Remaining right finger continues steering")
+	second.pressed = false
+	game._input(second)
+	check(game.player.presses.is_empty(), "All releases clear tracked controls")
 	game.pause_race()
+	touch.pressed = true
 	game._unhandled_input(touch)
-	check(not game.player.moving, "Touches do not steer while paused")
+	check(game.player.presses.is_empty(), "Touches do not steer while paused")
 	game.resume_race()
 	var emulated := InputEventMouseButton.new()
 	emulated.device = InputEvent.DEVICE_ID_EMULATION
 	emulated.button_index = MOUSE_BUTTON_LEFT
 	emulated.pressed = true
-	emulated.position = Vector2(30, 120)
+	emulated.position = Vector2(30, 200)
 	game._unhandled_input(emulated)
-	check(not game.player.moving, "Touch-generated mouse event cannot steer twice")
+	check(game.player.presses.is_empty(), "Emulated mouse cannot duplicate steering")
 	check(Input.emulate_mouse_from_touch, "Mouse emulation remains available for touch menus")
+	var key := InputEventKey.new()
+	key.keycode = KEY_RIGHT
+	key.pressed = true
+	key.echo = true
+	game._unhandled_input(key)
+	check(game.player.presses.is_empty(), "Key repeat cannot start steering")
+	key.echo = false
+	game._unhandled_input(key)
+	game.player.advance(0.2)
+	key.pressed = false
+	game._input(key)
+	check(game.player.presses.is_empty(), "Keyboard hold releases correctly")
+	var mouse := InputEventMouseButton.new()
+	mouse.button_index = MOUSE_BUTTON_LEFT
+	mouse.position = Vector2(30, 200)
+	mouse.pressed = true
+	game._unhandled_input(mouse)
+	game.player.advance(0.05)
+	mouse.pressed = false
+	game._input(mouse)
+	check(game.player.moving, "Desktop quick click completes a lane")
+	game.player.clear_input()
+	touch.pressed = true
+	touch.position = Vector2(30, 200)
+	game._unhandled_input(touch)
+	game.player.advance(0.05)
+	touch.canceled = true
+	touch.pressed = false
+	game._input(touch)
+	check(not game.player.moving and game.player.presses.is_empty(), "Cancelled touch cannot become a quick tap")
 
 
 func check_traffic(game: Node) -> void:
@@ -242,7 +328,7 @@ func check_traffic(game: Node) -> void:
 	game.traffic.rng.seed = 1982
 	game.traffic.try_spawn(game.road)
 	var car: TrafficCar = game.traffic.cars[0]
-	car.position.y = 209.0
+	car.position.y = game.road.player_y + 25.0
 	game.traffic.advance(0.03, game.road, game.settings, 0.0, true)
 	check(game.session.total_passes == 1, "A passed car scores once")
 	game.traffic.advance(0.03, game.road, game.settings, 0.0, true)
@@ -261,6 +347,42 @@ func check_traffic(game: Node) -> void:
 		game.road.section = section
 		game.road.advance(1.0, 120.0)
 		check(game.road.minimum_lane() <= game.road.maximum_lane(), "Valid lane range in section %d" % section)
+
+
+func check_portrait_geometry() -> void:
+	for dimensions in [Vector2i(280, 498), Vector2i(280, 622), Vector2i(360, 480)]:
+		var viewport := SubViewport.new()
+		viewport.size = dimensions
+		root.add_child(viewport)
+		var game: Node = load("res://scenes/game.tscn").instantiate()
+		game.get_node("Profile").storage_path = "/tmp/le-manz-geometry-profile.cfg"
+		viewport.add_child(game)
+		game.set_physics_process(false)
+		game.audio.set_enabled(false)
+		game.start_race()
+		check(is_equal_approx(game.road.player_y, dimensions.y - 80.0), "Player is 80 pixels above portrait bottom")
+		check(game.road.rows.back().position.y > dimensions.y, "Scene-authored road pool covers portrait height")
+		check(is_equal_approx(game.position.x, (dimensions.x - 280.0) * 0.5), "Road is centred on tablet")
+		for name in ["Title", "Help", "Settings", "Pause", "Results"]:
+			var panel: Control = game.get_node("UI/" + name)
+			check(panel.position.y >= 0.0 and panel.position.y + panel.size.y <= dimensions.y, "Portrait panel stays inside viewport")
+		game.phase = game.Phase.RACING
+		game.traffic.cars[0].activate(2, 90.0, Color.WHITE, false)
+		game.traffic.cars[0].position.y = game.road.player_y + 25.0
+		game.traffic.advance(0.03, game.road, game.settings, 0.0, true)
+		check(game.session.total_passes == 1, "Overtake line follows portrait player position")
+		game.player.horizontal_offset = 14.0
+		game.player.advance(0.0)
+		game.traffic.cars[0].position = game.player.position
+		check(game.traffic.collision_with(game.player) != null, "Collisions work between lanes and on centred tablets")
+		game.begin_crash()
+		game.advance_pit(4.0)
+		check(is_equal_approx(game.player.position.y, game.road.player_y) and game.player.horizontal_offset == -28.0, "Pit re-entry follows portrait geometry")
+		game.begin_finish()
+		check(game.finish_line.position.y == game.road.playfield_top - 16.0, "Finish line starts at portrait road top")
+		game.advance_finish((game.road.player_y - game.road.playfield_top + 40.0) / game.settings.scroll_speed + 0.1)
+		check(game.phase == game.Phase.RESULTS, "Finish sequence crosses player before results")
+		viewport.free()
 
 
 func check_difficulty_playthroughs(game: Node) -> void:

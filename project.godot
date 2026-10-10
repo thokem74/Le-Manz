@@ -21,13 +21,13 @@ boot_splash/bg_color=Color(0.06, 0.06, 0.10, 1)
 
 [display]
 
-window/size/viewport_width=384
-window/size/viewport_height=240
-window/size/window_width_override=1152
-window/size/window_height_override=720
-window/handheld/orientation=0
+window/size/viewport_width=280
+window/size/viewport_height=480
+window/size/window_width_override=560
+window/size/window_height_override=960
+window/handheld/orientation=1
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
+window/stretch/aspect="expand"
 
 [physics]
 

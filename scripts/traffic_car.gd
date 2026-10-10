@@ -52,9 +52,9 @@ func advance(delta: float, road: RaceRoad) -> void:
 	indicator.visible = changing and int(change_timer * 8.0) % 2 == 0
 	indicator.position.x = -6.0 if indicated_lane < lane_coordinate else 6.0
 	rear_lights.visible = road.section == RaceRoad.Section.NIGHT
-	var beam_width: float = maxf(10.0, (184.0 - position.y) * 0.48 + 10.0)
+	var beam_width: float = maxf(10.0, (road.player_y - position.y) * 0.48 + 10.0)
 	var inside_beam: bool = (
-		position.y >= 84.0 and position.y <= 196.0
+		position.y >= road.player_y - 100.0 and position.y <= road.player_y + 12.0
 		and absf(position.x - road.headlight_x) < beam_width
 	)
 	var unlit: bool = road.section == RaceRoad.Section.NIGHT and not inside_beam
