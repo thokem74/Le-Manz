@@ -17,6 +17,9 @@ settings = ExtResource("9")
 [node name="Player" parent="." instance=ExtResource("3")]
 position = Vector2(168, 400)
 z_index = 2
+[node name="Pit" type="Node2D" parent="."]
+position = Vector2(18, 400)
+z_index = 1
 [node name="FinishLine" type="Sprite2D" parent="."]
 visible = false
 texture = ExtResource("8")
@@ -235,29 +238,29 @@ horizontal_alignment = 1
 vertical_alignment = 1
 theme_override_font_sizes/font_size = 16
 theme_override_colors/font_color = Color(0.93, 0.93, 0.80, 1)
-[node name="Pit" type="Panel" parent="UI/HUD"]
-offset_left = 0.0
-offset_top = 372.0
-offset_right = 26.0
-offset_bottom = 416.0
+[node name="Bay" type="Panel" parent="Pit"]
+offset_left = -18.0
+offset_top = -22.0
+offset_right = 18.0
+offset_bottom = 22.0
 theme = ExtResource("6")
 mouse_filter = 2
-[node name="PitLabel" type="Label" parent="UI/HUD/Pit"]
-offset_left = 1.0
-offset_top = 4.0
-offset_right = 25.0
-offset_bottom = 16.0
+[node name="PitLabel" type="Label" parent="Pit"]
+offset_left = -18.0
+offset_top = -36.0
+offset_right = 18.0
+offset_bottom = -24.0
 theme = ExtResource("6")
 mouse_filter = 2
 text = "PIT"
 horizontal_alignment = 1
 vertical_alignment = 1
 theme_override_font_sizes/font_size = 8
-[node name="PitMark" type="Label" parent="UI/HUD/Pit"]
-offset_left = 1.0
-offset_top = 20.0
-offset_right = 25.0
-offset_bottom = 36.0
+[node name="PitMark" type="Label" parent="Pit/Bay"]
+offset_left = 0.0
+offset_top = 14.0
+offset_right = 36.0
+offset_bottom = 30.0
 theme = ExtResource("6")
 mouse_filter = 2
 text = "+"

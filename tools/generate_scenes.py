@@ -66,7 +66,7 @@ car_header = '''[gd_scene load_steps=5 format=3]
 [ext_resource type="Texture2D" path="res://assets/art/{texture}" id="2"]
 [ext_resource type="Texture2D" path="res://assets/art/lights.svg" id="3"]
 [sub_resource type="RectangleShape2D" id="hit"]
-size = Vector2(10, 18)
+size = Vector2(30, 30)
 [node name="{name}" type="Area2D"]
 collision_layer = 0
 collision_mask = 0
@@ -80,7 +80,7 @@ shape = SubResource("hit")
 save("scenes/player_car.tscn", car_header.format(script="player_car.gd", texture="player.svg", name="Player", sprite_options='hframes = 3\nmodulate = Color(0.95, 0.35, 0.36, 1)') + '''[node name="Headlights" type="Polygon2D" parent="."]
 visible = false
 z_index = -1
-polygon = PackedVector2Array(-4, -12, -46, -100, 46, -100, 4, -12)
+polygon = PackedVector2Array(-8, -14, -46, -100, 46, -100, 8, -14)
 color = Color(0.93, 0.93, 0.80, 0.13)
 ''')
 traffic_scene = car_header.format(script="traffic_car.gd", texture="traffic.svg", name="TrafficCar", sprite_options="")
@@ -90,7 +90,7 @@ traffic_scene += '''[node name="RearLights" type="Sprite2D" parent="."]
 texture = ExtResource("3")
 [node name="Indicator" type="Sprite2D" parent="."]
 texture = ExtResource("4")
-position = Vector2(6, 6)
+position = Vector2(12, 10)
 visible = false
 '''
 save("scenes/traffic_car.tscn", traffic_scene)
@@ -157,6 +157,9 @@ settings = ExtResource("9")
 [node name="Player" parent="." instance=ExtResource("3")]
 position = Vector2(168, 400)
 z_index = 2
+[node name="Pit" type="Node2D" parent="."]
+position = Vector2(18, 400)
+z_index = 1
 [node name="FinishLine" type="Sprite2D" parent="."]
 visible = false
 texture = ExtResource("8")
@@ -214,9 +217,9 @@ node("NoticeBacking", "ColorRect", "UI/HUD", 8, 70, 264, 24, "visible = false\nc
 label("Notice", "UI/HUD", "", 8, 70, 264, 24, "0.85, 0.84, 0.43, 1")
 node("BannerBacking", "ColorRect", "UI/HUD", 54, 180, 172, 38, "visible = false\ncolor = Color(0.13, 0.13, 0.20, 0.92)")
 label("Banner", "UI/HUD", "", 8, 184, 264, 30, "0.93, 0.93, 0.80, 1", 16)
-node("Pit", "Panel", "UI/HUD", 0, 372, 26, 44, "mouse_filter = 2")
-label("PitLabel", "UI/HUD/Pit", "PIT", 1, 4, 24)
-label("PitMark", "UI/HUD/Pit", "+", 1, 20, 24, 16, "0.43, 0.80, 0.83, 1", 16)
+node("Bay", "Panel", "Pit", -18, -22, 36, 44, "mouse_filter = 2")
+label("PitLabel", "Pit", "PIT", -18, -36, 36)
+label("PitMark", "Pit/Bay", "+", 0, 14, 36, 16, "0.43, 0.80, 0.83, 1", 16)
 
 panel("Title", "")
 node("Logo", "TextureRect", "UI/Title", 45, 16, 166, 30, 'texture = ExtResource("7")\nexpand_mode = 1')

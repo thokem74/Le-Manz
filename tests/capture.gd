@@ -25,7 +25,13 @@ func capture() -> void:
 	var game: Node = load("res://scenes/game.tscn").instantiate()
 	game.get_node("Profile").storage_path = "/tmp/le-manz-capture-profile.cfg"
 	viewport.add_child(game)
+	game.audio.set_enabled(false)
 	game.show_preview(view)
+	if view in ["crash1", "crash2", "pit"]:
+		game.start_race()
+		game.phase = game.Phase.RACING
+		game.begin_crash()
+		game.advance_pit(0.02 if view == "crash1" else (0.1 if view == "crash2" else 2.2))
 	game.set_physics_process(false)
 	game.update_hud()
 	if view in ["road", "curves", "narrow", "ice", "night"]:
@@ -41,4 +47,7 @@ func capture() -> void:
 	var image: Image = viewport.get_texture().get_image()
 	var result: Error = image.save_png(destination)
 	print("Captured %s to %s (%s)" % [view, destination, error_string(result)])
+	viewport.free()
+	await process_frame
+	await process_frame
 	quit(0 if result == OK else 1)

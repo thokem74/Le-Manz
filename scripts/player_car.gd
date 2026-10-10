@@ -9,6 +9,7 @@ var rules: RaceSettings
 # Each touch, mouse button, or key supplies only a held steering direction.
 var presses: Dictionary[int, int] = {}
 
+@onready var hitbox: CollisionShape2D = $Hitbox
 @onready var sprite: Sprite2D = $Sprite
 
 
@@ -67,7 +68,7 @@ func advance(delta: float) -> void:
 
 
 func constrain_to_road() -> void:
-	var limit: float = road.offset_limit()
+	var limit: float = road.offset_limit(visual_half_width())
 	horizontal_offset = clampf(horizontal_offset, -limit, limit)
 	if absf(horizontal_offset) >= limit and horizontal_offset * lateral_velocity > 0.0:
 		lateral_velocity = 0.0
@@ -79,5 +80,10 @@ func clear_input() -> void:
 
 
 func hit_rect() -> Rect2:
-	# Slightly inset from the pixel art, to keep close passes forgiving.
-	return Rect2(position - Vector2(5.0, 9.0), Vector2(10.0, 18.0))
+	# Use the editor-authored rectangle for every gameplay collision.
+	var bounds: Vector2 = (hitbox.shape as RectangleShape2D).size
+	return Rect2(position + hitbox.position - bounds * 0.5, bounds)
+
+
+func visual_half_width() -> float:
+	return sprite.texture.get_width() * absf(sprite.scale.x) / sprite.hframes * 0.5

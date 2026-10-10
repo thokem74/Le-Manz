@@ -53,9 +53,9 @@ func centre_x(screen_y: float) -> float:
 	return 140.0 + curve_offset(screen_y)
 
 
-func offset_limit() -> float:
-	# The full 16-pixel car stays on asphalt, with two pixels of edge clearance.
-	return maxf(0.0, width * 0.5 - 10.0)
+func offset_limit(car_half_width: float) -> float:
+	# Keep the complete artwork on asphalt, with two pixels of clearance.
+	return maxf(0.0, width * 0.5 - car_half_width - 2.0)
 
 
 func minimum_lane() -> int:

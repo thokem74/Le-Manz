@@ -3,7 +3,7 @@
 [ext_resource type="Texture2D" path="res://assets/art/player.svg" id="2"]
 [ext_resource type="Texture2D" path="res://assets/art/lights.svg" id="3"]
 [sub_resource type="RectangleShape2D" id="hit"]
-size = Vector2(10, 18)
+size = Vector2(30, 30)
 [node name="Player" type="Area2D"]
 collision_layer = 0
 collision_mask = 0
@@ -17,5 +17,5 @@ shape = SubResource("hit")
 [node name="Headlights" type="Polygon2D" parent="."]
 visible = false
 z_index = -1
-polygon = PackedVector2Array(-4, -12, -46, -100, 46, -100, 4, -12)
+polygon = PackedVector2Array(-8, -14, -46, -100, 46, -100, 8, -14)
 color = Color(0.93, 0.93, 0.80, 0.13)

@@ -8,6 +8,8 @@ const CAR_COLOURS: Array[Color] = [
 	Color("d9d56e"), Color("8e80ce"), Color("6ecbd4"), Color("f2a66c")
 ]
 
+const NARROW_GAP: float = 96.0
+
 var cars: Array[TrafficCar] = []
 var spawn_elapsed: float = 0.0
 var rng := RandomNumberGenerator.new()
@@ -45,7 +47,7 @@ func constrain_to_road(road: RaceRoad) -> void:
 			for other in cars:
 				if (
 					car.active and other.active and car != other
-					and absf(car.position.y - other.position.y) < 60.0
+					and absf(car.position.y - other.position.y) < NARROW_GAP
 				):
 					(car if car.position.y < other.position.y else other).deactivate()
 
@@ -57,9 +59,9 @@ func advance(
 		rules.minimum_spawn_seconds, rules.initial_spawn_seconds - elapsed / 900.0
 	)
 	spawn_elapsed += delta
-	if spawn_elapsed >= interval:
+	if spawn_elapsed >= interval and try_spawn(road):
+		# Blocked rows retain their timer; retry as soon as the gap opens.
 		spawn_elapsed = 0.0
-		try_spawn(road)
 	for car in cars:
 		if not car.active:
 			continue
@@ -72,7 +74,7 @@ func advance(
 			)
 			if road.section != RaceRoad.Section.NARROW and lane_clear(destination, car.position.y, car):
 				car.signal_lane_change(destination)
-		if not car.passed and car.position.y > road.player_y + 26.0:
+		if not car.passed and car.position.y > road.player_y + car.hit_rect().size.y:
 			car.passed = true
 			if allow_passes:
 				overtaken.emit()
@@ -80,17 +82,19 @@ func advance(
 			car.deactivate()
 
 
-func try_spawn(road: RaceRoad) -> void:
-	# One car per row, with a full reaction gap. Narrow sections never form a wall.
+func try_spawn(road: RaceRoad) -> bool:
+	# Narrow rows leave enough time to cross 56 pixels after a car clears.
+	var row_gap: float = NARROW_GAP if road.section == RaceRoad.Section.NARROW else 54.0
+	var spawn_y: float = road.playfield_top - 28.0
 	for car in cars:
-		if car.active and car.position.y < road.playfield_top + 26.0:
-			return
+		if car.active and car.position.y < spawn_y + row_gap:
+			return false
 	var available_lanes: Array[int] = []
 	for candidate in range(road.minimum_lane(), road.maximum_lane() + 1):
 		if lane_clear(candidate, road.playfield_top - 28.0):
 			available_lanes.append(candidate)
 	if available_lanes.is_empty():
-		return
+		return false
 	var lane: int = available_lanes[rng.randi_range(0, available_lanes.size() - 1)]
 	for car in cars:
 		if not car.active:
@@ -100,7 +104,8 @@ func try_spawn(road: RaceRoad) -> void:
 			car.activate(lane, speed, CAR_COLOURS[rng.randi_range(0, 3)], rng.randf() < 0.22)
 			car.position.y = road.playfield_top - 28.0
 			car.position.x = road.lane_x(float(lane), car.position.y)
-			return
+			return true
+	return false
 
 
 func lane_clear(lane: int, screen_y: float, except: TrafficCar = null) -> bool:

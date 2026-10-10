@@ -45,6 +45,17 @@ in `user://profile.cfg`. Records are updated when a race finishes or is ended
 from the pause menu. The timer values are mobile adaptation values, not a claim
 of exact original timings.
 
+Cars use **32 × 34** native pixel artwork and **30 × 30** scene-authored collision
+rectangles. At 56-pixel lane spacing, the combined 30-pixel collision half-width
+closes the 28-pixel divider corridor. Road edges clamp using the visual half-width
+plus two pixels of clearance (offset limits ±94 on open roads and ±38 on narrow
+roads). Repairs centre at x=18 in a 36-pixel bay drawn behind the car.
+
+The sampled [C64 animation](https://www.c64-wiki.com/images/7/70/Lemans_Animation.gif)
+shows a 20 × 21 visible car on a 144-pixel main carriageway. Scaling to this game's
+224-pixel road gives approximately 31 × 33 pixels; 32 × 34 is a rounded adaptation,
+not a verified original collision constant.
+
 ## Develop and tune
 
 The main scene is `scenes/game.tscn`. Cars, road strips, traffic pool, audio
@@ -59,7 +70,7 @@ their behavior rather than constructing their visuals at runtime.
   geometry, road variants, and scrolling. `RoadStrip` caches its visual nodes.
 - `RaceTraffic` / `TrafficCar`: 24 reusable cars, spacing, indicators,
   overtakes, and forgiving collision bounds. Narrow-road traffic has equal
-  relative speeds and at least a 60-pixel gap so it cannot form a traffic wall.
+  relative speeds and at least a 96-pixel gap so it cannot form a traffic wall.
 - `GameProfile` / `RaceAudio`: local persistence and audio; `game.gd` coordinates
   race phases and the existing UI nodes.
 
@@ -115,12 +126,15 @@ multi-touch event handling, pit recovery,
 expiry, restart, background notifications, Android Back, traffic spacing,
 and complete races. It uses isolated `/tmp` profiles rather than your game saves.
 The rendering script captures real scene layouts; views include `title`, `help`,
-`settings`, `pause`, `results`, `countdown`, `road`, `curves`, `narrow`, `ice`, and `night`.
+`settings`, `pause`, `results`, `countdown`, `road`, `curves`, `narrow`, `ice`, `night`, `crash1`, `crash2`, and `pit`.
 
 Validation on **10 October 2026**:
 
-- 228 integration checks passed, including complete races on all three levels,
+- 251 integration checks passed, including complete races on all three levels,
   timer bonuses, records, releases over UI, cancelled touches, and pause/restart.
+  Divider and edge collision checks cover open and narrow roads. A 60 Hz simulation
+  steers past eight alternating narrow obstacles spaced exactly 96 pixels apart.
+  Blocked spawn retries and narrowing gap enforcement also pass.
 - Rendered and inspected menus, countdown, and every road variant at approximately
   **9:16**, **9:20**, and **3:4** using actual offscreen Godot scene rendering.
   Add `--size=280x622` or `--size=360x480` to the capture command for these sizes.
@@ -130,11 +144,19 @@ Validation on **10 October 2026**:
   clears the camera cutout. Touch menus, held steering between lanes, short-press
   movement, ice hold/release drift, pause, restart, and explicit resume
   after background verified.
-- Android vibration history confirms completed **250 ms** crash requests.
+- The enlarged build was installed and tested again: an 80 ms left press moved
+  only about 12 logical pixels; a 900 ms hold moved toward the edge. Collisions
+  triggered automatic recovery, and the enlarged repair sprite remained visible
+  inside its bay. Backgrounding returned to the resume screen.
+- Android vibration history confirms completed **250 ms** crash requests,
+  including two crashes in the enlarged build.
 - Deterministic collision-free simulation reaches the first time bonus at about
-  **85.5 seconds** on each difficulty. Stationary drivers finish at their expected
+  **90.0 seconds** on each difficulty. Stationary drivers finish at their expected
   180/120/90-second clocks. These checks measure scoring opportunity and lifecycle;
-  they do not substitute for human balance testing.
+  they do not substitute for human balance testing. The Hard bonus opportunity is
+  close to expiry, so long human playtests remain particularly important there.
+  Seed 1982 stationary runs: Easy 8,705 points / 91 passes / 29 crashes;
+  Normal 5,581 / 60 / 19; Hard 4,664 / 47 / 14.
 
 Subjective audio listening, measured frame pacing, long human difficulty
 playtests, physical simultaneous multi-touch, and subjective ice feel remain

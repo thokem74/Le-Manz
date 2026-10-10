@@ -136,7 +136,7 @@ func advance_race(delta: float) -> void:
 func advance_pit(delta: float) -> void:
 	phase_elapsed += delta
 	var progress: float = phase_elapsed / settings.repair_seconds
-	var pit_position := Vector2(13.0, road.player_y)
+	var pit_position := Vector2(18.0, road.player_y)
 	if progress < 0.18:
 		player.sprite.frame = 1 + int(phase_elapsed * 12.0) % 2
 	elif progress < 0.45:
@@ -460,7 +460,7 @@ func apply_safe_area() -> void:
 	$UI/HUD.size = Vector2(280.0, safe.size.y)
 	$UI/HUD/LeftHint.position.y = safe.size.y - 18.0
 	$UI/HUD/RightHint.position.y = safe.size.y - 18.0
-	$UI/HUD/Pit.position.y = road.player_y - $UI/HUD.position.y - 28.0
+	$Pit.position.y = road.player_y
 	$UI/HUD/Banner.position.y = safe.size.y * 0.42
 	$UI/HUD/BannerBacking.position.y = $UI/HUD/Banner.position.y - 4.0
 	for name in ["Title", "Help", "Settings", "Pause", "Results"]:

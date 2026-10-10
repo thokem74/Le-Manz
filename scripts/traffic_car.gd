@@ -11,6 +11,7 @@ var wants_change: bool = false
 var pending_lane: int = -1
 var signal_remaining: float = 0.0
 
+@onready var hitbox: CollisionShape2D = $Hitbox
 @onready var sprite: Sprite2D = $Sprite
 @onready var rear_lights: Sprite2D = $RearLights
 @onready var indicator: Sprite2D = $Indicator
@@ -50,7 +51,7 @@ func advance(delta: float, road: RaceRoad) -> void:
 	var indicated_lane: int = pending_lane if pending_lane >= 0 else target_lane
 	var changing: bool = pending_lane >= 0 or not is_equal_approx(lane_coordinate, float(target_lane))
 	indicator.visible = changing and int(change_timer * 8.0) % 2 == 0
-	indicator.position.x = -6.0 if indicated_lane < lane_coordinate else 6.0
+	indicator.position.x = -12.0 if indicated_lane < lane_coordinate else 12.0
 	rear_lights.visible = road.section == RaceRoad.Section.NIGHT
 	var beam_width: float = maxf(10.0, (road.player_y - position.y) * 0.48 + 10.0)
 	var inside_beam: bool = (
@@ -69,4 +70,6 @@ func signal_lane_change(destination: int) -> void:
 
 
 func hit_rect() -> Rect2:
-	return Rect2(position - Vector2(5.0, 9.0), Vector2(10.0, 18.0))
+	# Use the editor-authored rectangle for every gameplay collision.
+	var bounds: Vector2 = (hitbox.shape as RectangleShape2D).size
+	return Rect2(position + hitbox.position - bounds * 0.5, bounds)

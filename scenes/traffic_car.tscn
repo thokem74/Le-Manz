@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" path="res://assets/art/lights.svg" id="3"]
 [ext_resource type="Texture2D" path="res://assets/art/indicator.svg" id="4"]
 [sub_resource type="RectangleShape2D" id="hit"]
-size = Vector2(10, 18)
+size = Vector2(30, 30)
 [node name="TrafficCar" type="Area2D"]
 collision_layer = 0
 collision_mask = 0
@@ -18,5 +18,5 @@ shape = SubResource("hit")
 texture = ExtResource("3")
 [node name="Indicator" type="Sprite2D" parent="."]
 texture = ExtResource("4")
-position = Vector2(6, 6)
+position = Vector2(12, 10)
 visible = false

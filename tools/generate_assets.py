@@ -106,30 +106,32 @@ def svg(name, w, h, content):
     (ART / name).write_text(f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">{content}</svg>\n')
 
 
+# Native 32 x 34 artwork: integer rectangles retain crisp edges at every scale.
 car = "".join([
-    rect(1, 4, 3, 6, "#161622"), rect(12, 4, 3, 6, "#161622"),
-    rect(1, 15, 3, 6, "#161622"), rect(12, 15, 3, 6, "#161622"),
-    rect(5, 0, 6, 2, "#ffffff"), rect(3, 2, 10, 20, "#eeeecc"),
-    rect(2, 3, 12, 4, "#ffffff"), rect(6, 2, 4, 6, "#c3c3c3"),
-    rect(5, 8, 6, 6, "#222034"), rect(6, 8, 4, 2, "#6ecbd4"),
-    rect(4, 15, 8, 4, "#ffffff"), rect(7, 15, 2, 4, "#c3c3c3"),
-    rect(2, 20, 12, 3, "#eeeecc"), rect(3, 21, 2, 2, "#b13e53"),
-    rect(11, 21, 2, 2, "#b13e53"), rect(3, 3, 2, 2, "#d9d56e"), rect(11, 3, 2, 2, "#d9d56e"),
+    rect(0, 6, 6, 8, "#161622"), rect(26, 6, 6, 8, "#161622"),
+    rect(0, 23, 6, 8, "#161622"), rect(26, 23, 6, 8, "#161622"),
+    rect(10, 0, 12, 3, "#ffffff"), rect(6, 3, 20, 30, "#eeeecc"),
+    rect(4, 5, 24, 6, "#ffffff"), rect(12, 3, 8, 9, "#c3c3c3"),
+    rect(9, 12, 14, 9, "#222034"), rect(11, 12, 10, 3, "#6ecbd4"),
+    rect(8, 23, 16, 6, "#ffffff"), rect(14, 23, 4, 6, "#c3c3c3"),
+    rect(4, 30, 24, 4, "#eeeecc"), rect(6, 31, 4, 3, "#b13e53"),
+    rect(22, 31, 4, 3, "#b13e53"), rect(6, 5, 4, 3, "#d9d56e"),
+    rect(22, 5, 4, 3, "#d9d56e"),
 ])
-svg("traffic.svg", 16, 24, car)
+svg("traffic.svg", 32, 34, car)
 explosions = ""
 for frame in (1, 2):
-    offset = frame * 16
-    explosions += rect(offset + 4, 3, 8, 18, "#b13e53")
-    for x, y, w, h in [(2, 8, 12, 8), (5, 2, 5, 19), (0, 11, 16, 3), (7, 0, 3, 24)]:
+    offset = frame * 32
+    explosions += rect(offset + 7, 4, 18, 27, "#b13e53")
+    for x, y, w, h in [(3, 11, 26, 12), (10, 3, 10, 28), (0, 16, 32, 5), (14, 0, 5, 34)]:
         explosions += rect(offset + x, y, w, h, "#ef7d57" if frame == 1 else "#d9d56e")
-    explosions += rect(offset + 6, 8, 4, 8, "#eeeecc")
-svg("player.svg", 48, 24, car + explosions)
+    explosions += rect(offset + 12, 11, 8, 12, "#eeeecc")
+svg("player.svg", 96, 34, car + explosions)
 svg("pixel.svg", 1, 8, rect(0, 0, 1, 8, "#ffffff"))
 svg("kerb.svg", 4, 8, rect(0, 0, 4, 8, "#ffffff"))
 svg("dash.svg", 1, 8, rect(0, 1, 1, 6, "#ffffff"))
 svg("tree.svg", 12, 8, rect(5, 4, 2, 4, "#663931") + rect(2, 1, 8, 5, "#346524") + rect(0, 2, 12, 3, "#6abe30"))
-svg("lights.svg", 16, 24, rect(3, 21, 2, 2, "#ff3455") + rect(11, 21, 2, 2, "#ff3455"))
+svg("lights.svg", 32, 34, rect(6, 31, 4, 3, "#ff3455") + rect(22, 31, 4, 3, "#ff3455"))
 svg("indicator.svg", 2, 3, rect(0, 0, 2, 3, "#ffdf64"))
 checks = "".join(rect(x * 8, y * 8, 8, 8, "#eeeecc" if (x + y) % 2 == 0 else "#222034") for y in range(2) for x in range(28))
 svg("finish.svg", 224, 16, checks)
@@ -142,7 +144,7 @@ for i, letter in enumerate("LE MANZ"):
                 logo += rect(i * 24 + x * 4, y * 4, 4, 4, "#d9d56e")
 svg("logo.svg", 166, 30, logo)
 # App icon follows the in-game car rather than retaining the Godot logo.
-svg("app_icon.svg", 192, 192, rect(0, 0, 192, 192, "#222034") + rect(40, 0, 112, 192, "#6c6c6c") + '<g transform="translate(64,48) scale(4)">' + car + "</g>" + rect(94, 0, 4, 28, "#eeeecc") + rect(94, 160, 4, 32, "#eeeecc"))
+svg("app_icon.svg", 192, 192, rect(0, 0, 192, 192, "#222034") + rect(40, 0, 112, 192, "#6c6c6c") + '<g transform="translate(48,45) scale(3)">' + car + "</g>" + rect(94, 0, 4, 28, "#eeeecc") + rect(94, 160, 4, 32, "#eeeecc"))
 
 RATE = 22050
 

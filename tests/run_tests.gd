@@ -29,6 +29,8 @@ func run() -> void:
 	check_lifecycle(game)
 	check_inputs(game)
 	check_traffic(game)
+	check_closed_gaps(game)
+	check_narrow_escape_routes(game)
 	check_portrait_geometry()
 	check_clean_run_thresholds(game)
 	check_difficulty_playthroughs(game)
@@ -124,13 +126,13 @@ func check_steering(game: Node) -> void:
 	car.clear_input()
 	car.press_control(0, -1)
 	car.advance(2.0)
-	check(is_equal_approx(car.horizontal_offset, -102.0) and car.lateral_velocity == 0.0, "Full car clamps at road edge")
+	check(is_equal_approx(car.horizontal_offset, -94.0) and car.lateral_velocity == 0.0, "Full car clamps at road edge")
 	game.road.section = RaceRoad.Section.NARROW
 	for step in range(60):
 		game.road.advance(1.0 / 60.0, 120.0)
 		car.advance(1.0 / 60.0)
-		check(absf(car.horizontal_offset) <= game.road.offset_limit(), "Narrowing keeps full car inside road")
-	check(is_equal_approx(car.horizontal_offset, -46.0), "Narrow road preserves free position rather than lane snapping")
+		check(absf(car.horizontal_offset) <= game.road.offset_limit(car.visual_half_width()), "Narrowing keeps full car inside road")
+	check(is_equal_approx(car.horizontal_offset, -38.0), "Narrow road preserves free position rather than lane snapping")
 	car.clear_input()
 	game.road.reset_road()
 	game.road.section = RaceRoad.Section.ICE
@@ -325,7 +327,7 @@ func check_traffic(game: Node) -> void:
 	game.traffic.rng.seed = 1982
 	game.traffic.try_spawn(game.road)
 	var car: TrafficCar = game.traffic.cars[0]
-	car.position.y = game.road.player_y + 25.0
+	car.position.y = game.road.player_y + 29.0
 	game.traffic.advance(0.03, game.road, game.settings, 0.0, true)
 	check(game.session.total_passes == 1, "A passed car scores once")
 	game.traffic.advance(0.03, game.road, game.settings, 0.0, true)
@@ -365,7 +367,7 @@ func check_portrait_geometry() -> void:
 			check(panel.position.y >= 0.0 and panel.position.y + panel.size.y <= dimensions.y, "Portrait panel stays inside viewport")
 		game.phase = game.Phase.RACING
 		game.traffic.cars[0].activate(2, 90.0, Color.WHITE, false)
-		game.traffic.cars[0].position.y = game.road.player_y + 25.0
+		game.traffic.cars[0].position.y = game.road.player_y + 29.0
 		game.traffic.advance(0.03, game.road, game.settings, 0.0, true)
 		check(game.session.total_passes == 1, "Overtake line follows portrait player position")
 		game.player.horizontal_offset = 14.0
@@ -422,4 +424,98 @@ func check_clean_run_thresholds(game: Node) -> void:
 			for other in game.traffic.cars:
 				if car != other and car.active and other.active:
 					smallest_gap = minf(smallest_gap, absf(car.position.y - other.position.y))
-	check(smallest_gap >= 60.0, "Two-lane traffic cannot form an unavoidable wall")
+	check(smallest_gap >= 96.0, "Two-lane traffic cannot form an unavoidable wall")
+
+
+func check_closed_gaps(game: Node) -> void:
+	game.start_race()
+	var car: TrafficCar = game.traffic.cars[0]
+	check(game.player.sprite.texture.get_size() == Vector2(96, 34), "Player has three native 32 x 34 frames")
+	check(car.sprite.texture.get_size() == Vector2(32, 34), "Traffic uses the same visual dimensions")
+	check(game.player.hit_rect().size == Vector2(30, 30) and car.hit_rect().size == Vector2(30, 30), "Both scene collision rectangles are 30 x 30")
+	for lane in range(3):
+		car.activate(lane, 100.0, Color.WHITE, false)
+		car.position = Vector2(game.road.lane_x(lane, game.road.player_y), game.road.player_y)
+		game.player.horizontal_offset = (lane - 1.0) * RaceRoad.LANE_WIDTH
+		game.player.advance(0.0)
+		check(game.traffic.collision_with(game.player) == car, "Lane divider %d provides no safe corridor" % lane)
+		game.player.horizontal_offset = (lane - 0.5) * RaceRoad.LANE_WIDTH
+		game.player.advance(0.0)
+		check(game.traffic.collision_with(game.player) == null, "Adjacent lane %d remains clear" % lane)
+	for side in [-1, 1]:
+		game.player.horizontal_offset = side * 1000.0
+		game.player.advance(0.0)
+		car.activate(0 if side < 0 else 3, 100.0, Color.WHITE, false)
+		car.position = Vector2(game.road.lane_x(car.target_lane, game.road.player_y), game.road.player_y)
+		check(game.traffic.collision_with(game.player) == car, "Road edge %d provides no safe corridor" % side)
+	game.player.reset_car(game.road, game.settings)
+	car.activate(1, 100.0, Color.WHITE, false)
+	car.position = Vector2(game.road.lane_x(1, game.road.player_y), game.road.player_y)
+	game.player.press_control(0, -1)
+	game.player.advance(0.16)
+	check(game.traffic.collision_with(game.player) == car, "Collision is detected during continuous steering")
+	game.player.clear_input()
+	var original_shape: RectangleShape2D = car.hitbox.shape
+	var edited_shape := RectangleShape2D.new()
+	edited_shape.size = Vector2(22, 26)
+	car.hitbox.shape = edited_shape
+	check(car.hit_rect().size == edited_shape.size, "Collision reads the scene shape rather than hard-coded dimensions")
+	car.hitbox.shape = original_shape
+	game.traffic.reset_traffic()
+	game.road.section = RaceRoad.Section.NARROW
+	game.road.advance(1.0, 0.0)
+	for offset in [-38.0, 0.0, 38.0]:
+		game.player.horizontal_offset = offset
+		game.player.advance(0.0)
+		car.activate(1 if offset <= 0.0 else 2, 100.0, Color.WHITE, false)
+		car.position = Vector2(game.road.lane_x(car.target_lane, game.road.player_y), game.road.player_y)
+		check(game.traffic.collision_with(game.player) == car, "Narrow edge/divider %.0f provides no safe corridor" % offset)
+	check(game.get_node("Pit/Bay").size.x == 36.0, "Pit bay fits the larger artwork")
+	check(game.get_node("Pit").z_index < game.player.z_index, "Pit bay renders behind the recovering car")
+	car.activate(1, 100.0, Color.WHITE, false)
+	car.position.y = game.road.playfield_top
+	game.traffic.spawn_elapsed = 1.0
+	check(not game.traffic.try_spawn(game.road), "Narrow spawning reports a blocked row")
+	game.traffic.advance(0.01, game.road, game.settings, 0.0, false)
+	check(game.traffic.spawn_elapsed > 1.0, "Blocked spawning retains elapsed time")
+	car.position.y = game.road.playfield_top + 68.0
+	game.traffic.advance(0.01, game.road, game.settings, 0.0, false)
+	check(game.traffic.spawn_elapsed == 0.0, "Spawn retries immediately once its 96-pixel gap opens")
+	var other: TrafficCar = game.traffic.cars[2]
+	other.activate(2, 100.0, Color.WHITE, false)
+	other.position.y = car.position.y - 40.0
+	game.traffic.constrain_to_road(game.road)
+	check(not other.active, "Narrowing removes traffic that violates the larger reaction gap")
+
+
+func check_narrow_escape_routes(game: Node) -> void:
+	# Drive with real held input past alternating obstacles spaced exactly 96 pixels.
+	# Switching only after the preceding collision rectangle clears is conservative.
+	game.start_race()
+	game.traffic.reset_traffic()
+	game.road.section = RaceRoad.Section.NARROW
+	game.road.advance(1.0, 0.0)
+	game.player.reset_car(game.road, game.settings)
+	for index in range(8):
+		var car: TrafficCar = game.traffic.cars[index]
+		car.activate(1 + index % 2, 100.0, Color.WHITE, false)
+		car.position.y = game.road.player_y - 100.0 - index * 96.0
+		car.advance(0.0, game.road)
+	var cleared: int = 0
+	var destination: float = 28.0
+	var collided: bool = false
+	for step in range(60 * 10):
+		if cleared < 8 and game.traffic.cars[cleared].position.y >= game.road.player_y + 30.0:
+			destination = -28.0 if cleared % 2 == 0 else 28.0
+			cleared += 1
+		game.player.clear_input()
+		if absf(destination - game.player.horizontal_offset) > 1.5:
+			game.player.press_control(0, 1 if destination > game.player.horizontal_offset else -1)
+		game.player.advance(1.0 / 60.0)
+		for car in game.traffic.cars:
+			if car.active:
+				car.advance(1.0 / 60.0, game.road)
+		if game.traffic.collision_with(game.player) != null:
+			collided = true
+	check(not collided and cleared == 8, "Held steering escapes eight alternating narrow obstacles at the minimum gap")
+	game.player.clear_input()
