@@ -11,13 +11,13 @@ config_version=5
 [application]
 
 config/name="Le Manz"
+run/main_scene="res://scenes/game.tscn"
 config/quit_on_go_back=false
 config/features=PackedStringArray("4.7", "GL Compatibility")
-run/main_scene="res://scenes/game.tscn"
 run/max_fps=60
-config/icon="res://assets/art/app_icon.svg"
+boot_splash/bg_color=Color(0.06, 0.06, 0.1, 1)
 boot_splash/show_image=false
-boot_splash/bg_color=Color(0.06, 0.06, 0.10, 1)
+config/icon="res://assets/art/app_icon.svg"
 
 [display]
 
@@ -25,9 +25,9 @@ window/size/viewport_width=280
 window/size/viewport_height=480
 window/size/window_width_override=560
 window/size/window_height_override=960
-window/handheld/orientation=1
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/handheld/orientation=1
 
 [physics]
 
@@ -35,15 +35,9 @@ window/stretch/aspect="expand"
 
 [rendering]
 
+textures/canvas_textures/default_texture_filter=0
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-textures/default_filters/use_nearest_mipmap_filter=false
-textures/canvas_textures/default_texture_filter=0
-environment/defaults/default_clear_color=Color(0.06, 0.06, 0.10, 1)
 textures/vram_compression/import_etc2_astc=true
-
-[input_devices]
-
-pointing/emulate_mouse_from_touch=true
-pointing/emulate_touch_from_mouse=false
+environment/defaults/default_clear_color=Color(0.06, 0.06, 0.1, 1)

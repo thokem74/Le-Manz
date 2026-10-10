@@ -6,4 +6,4 @@
 script = ExtResource("1")
 starting_seconds = PackedFloat32Array(180, 120, 90)
 bonus_seconds = PackedFloat32Array(90, 60, 45)
-clean_pass_bonus_points = PackedInt32Array(8000, 6000, 4000)
+clean_pass_bonus_points = PackedInt32Array(4000, 2000, 1000)
