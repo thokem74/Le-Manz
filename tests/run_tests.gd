@@ -108,24 +108,19 @@ func check_steering(game: Node) -> void:
 	check(is_equal_approx(car.horizontal_offset, 10.0), "Press begins continuous movement immediately")
 	car.release_control(0)
 	car.advance(0.18)
-	check(is_equal_approx(car.horizontal_offset, -28.0), "Quick tap completes one lane from press position")
+	check(is_equal_approx(car.horizontal_offset, 10.0), "Quick release stops without completing a lane")
 	car.press_control(0, 1)
 	car.advance(0.2)
 	car.release_control(0)
 	var stopped: float = car.horizontal_offset
 	car.advance(0.2)
-	check(is_equal_approx(car.horizontal_offset, stopped) and not car.moving, "Dry hold releases without snapping")
-	car.request_tap(-1, car.horizontal_offset)
-	car.request_tap(1, car.horizontal_offset)
-	car.request_tap(-1, car.horizontal_offset)
-	car.advance(0.18)
-	check(car.moving and car.buffered_direction == 0, "Exactly one tap queues")
-	car.advance(0.18)
-	check(is_equal_approx(car.horizontal_offset, stopped), "Queued opposite tap returns one lane")
-	car.request_tap(-1, car.horizontal_offset)
-	car.press_control(0, 1)
-	car.advance(0.2)
-	check(not car.moving and car.buffered_direction == 0, "Hold cancels tap automation")
+	check(is_equal_approx(car.horizontal_offset, stopped) and car.lateral_velocity == 0.0, "Dry hold releases without snapping")
+	for count in range(3):
+		car.press_control(0, -1)
+		car.advance(0.02)
+		car.release_control(0)
+	car.advance(1.0)
+	check(is_equal_approx(car.horizontal_offset, stopped - 10.8), "Rapid short presses move only while held")
 	car.clear_input()
 	car.press_control(0, -1)
 	car.advance(2.0)
@@ -163,7 +158,7 @@ func check_steering(game: Node) -> void:
 	car.advance(0.1)
 	car.release_control(0)
 	car.advance(0.30)
-	check(is_equal_approx(car.horizontal_offset, 56.0) and car.lateral_velocity == 0.0, "Ice tap settles precisely after 0.30 seconds")
+	check(is_equal_approx(car.horizontal_offset, 11.25) and car.lateral_velocity == 0.0, "Short ice press produces proportionate drift without a lane switch")
 	car.press_control(0, -1)
 	car.advance(0.2)
 	stopped = car.horizontal_offset
@@ -174,12 +169,12 @@ func check_steering(game: Node) -> void:
 	car.lateral_velocity = 180.0
 	car.advance(0.5)
 	check(is_equal_approx(car.horizontal_offset, 27.0), "Delayed frame preserves exact ice stopping distance")
-	car.request_tap(1, 0.0)
-	car.advance(0.15)
-	var halfway: float = car.horizontal_offset
+	car.press_control(0, 1)
+	car.advance(0.05)
+	var before_transition: float = car.horizontal_offset
 	game.road.section = RaceRoad.Section.NIGHT
 	car.advance(0.01)
-	check(car.horizontal_offset >= halfway and car.tap_on_ice, "Ice tap keeps its easing when the road changes")
+	check(is_equal_approx(car.horizontal_offset - before_transition, 1.8), "Leaving ice restores direct held steering")
 	car.clear_input()
 	game.road.section = RaceRoad.Section.CURVES
 	game.road.advance(1.0, 120.0)
@@ -227,7 +222,7 @@ func check_lifecycle(game: Node) -> void:
 	game.player.advance(0.2)
 	var position_before_pause: float = game.player.horizontal_offset
 	game.pause_race()
-	check(not game.player.moving and game.player.presses.is_empty() and game.player.lateral_velocity == 0.0, "Pause clears all steering state")
+	check(game.player.presses.is_empty() and game.player.lateral_velocity == 0.0, "Pause clears all steering state")
 	game.resume_race()
 	game.player.advance(0.2)
 	check(is_equal_approx(game.player.horizontal_offset, position_before_pause), "Resume requires fresh input")
@@ -271,7 +266,7 @@ func check_inputs(game: Node) -> void:
 	touch.pressed = false
 	touch.position = Vector2(220, 10)
 	game._input(touch)
-	check(not game.player.moving, "Overlapping release over HUD does not create a tap")
+	check(not game.player.presses.has(0), "Release over HUD removes the tracked finger")
 	game.player.advance(0.2)
 	check(game.player.horizontal_offset > before, "Remaining right finger continues steering")
 	second.pressed = false
@@ -310,7 +305,9 @@ func check_inputs(game: Node) -> void:
 	game.player.advance(0.05)
 	mouse.pressed = false
 	game._input(mouse)
-	check(game.player.moving, "Desktop quick click completes a lane")
+	var released_offset: float = game.player.horizontal_offset
+	game.player.advance(0.3)
+	check(is_equal_approx(game.player.horizontal_offset, released_offset), "Quick mouse click stops without completing a lane")
 	game.player.clear_input()
 	touch.pressed = true
 	touch.position = Vector2(30, 200)
@@ -319,7 +316,7 @@ func check_inputs(game: Node) -> void:
 	touch.canceled = true
 	touch.pressed = false
 	game._input(touch)
-	check(not game.player.moving and game.player.presses.is_empty(), "Cancelled touch cannot become a quick tap")
+	check(game.player.lateral_velocity == 0.0 and game.player.presses.is_empty(), "Cancelled touch stops steering")
 
 
 func check_traffic(game: Node) -> void:

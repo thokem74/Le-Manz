@@ -12,17 +12,16 @@ Open `project.godot` in Godot and press **F5**. On Android, install
 
 - Play in **portrait**. Hold the **left half** to steer left or the **right half**
   to steer right. Release stops ordinary-road steering without lane snapping.
-- A **quick tap (160 ms or less)** completes one lane-width displacement from
-  where the press began. Completion takes **0.18 seconds after release**. One
-  additional tap can queue; holding cancels automated tap movement.
+- A short press moves a short distance. Movement lasts only while the control is
+  held; releasing never completes a lane switch or queues another movement.
 - Forward speed is always **180 km/h**. Sideways speed is **180 logical pixels/s**.
 - On ice, held steering accelerates gradually, then coasts briefly after release.
   Countersteer to brake or reverse the slide. A full-speed release drifts about
-  **27 pixels over 0.30 seconds**. Ice taps settle precisely over **0.30 seconds**.
-- Opposite simultaneous touches cancel steering; overlapping touches never
-  trigger lane taps. Each touch keeps its starting direction when dragged.
-- On desktop, use held **Left/Right**, **A/D**, or the mouse. Quick key presses
-  and clicks also complete a lane displacement. **P/Escape** pauses; Android
+  **27 pixels over 0.30 seconds**. Short presses produce proportionately less drift.
+- Opposite simultaneous touches cancel steering. Each touch keeps its starting
+  direction when dragged.
+- On desktop, use held **Left/Right**, **A/D**, or the mouse. Short key presses
+  and clicks move only while held. **P/Escape** pauses; Android
   **Back** pauses during a race and returns from menus.
 - Distance earns **2 points/metre**. Every **10 clean passes** earns **1,000 points**.
   Every **20,000 points** awards more time.
@@ -56,8 +55,7 @@ their behavior rather than constructing their visuals at runtime.
   difficulty clocks, speed, steering, repairs, scoring, and traffic intervals.
   Clock-array order is **Easy, Normal, Hard**.
 - `RaceSession`: distance, clean-pass bonuses, timer thresholds, and race totals.
-- `PlayerCar`: continuous steering, per-control press timing, ice momentum, and
-  one queued tap; `RaceRoad`: shared lane
+- `PlayerCar`: continuous steering, per-control held directions, and ice momentum; `RaceRoad`: shared lane
   geometry, road variants, and scrolling. `RoadStrip` caches its visual nodes.
 - `RaceTraffic` / `TrafficCar`: 24 reusable cars, spacing, indicators,
   overtakes, and forgiving collision bounds. Narrow-road traffic has equal
@@ -112,7 +110,7 @@ godot --path . --script tests/capture.gd -- --view=night --out=/tmp/le-manz-nigh
 ```
 
 The integration suite covers difficulty clocks/bonuses, scoring, persistence,
-continuous steering, quick taps, ice momentum, road boundaries and narrowing,
+continuous steering, short presses, ice momentum, road boundaries and narrowing,
 multi-touch event handling, pit recovery,
 expiry, restart, background notifications, Android Back, traffic spacing,
 and complete races. It uses isolated `/tmp` profiles rather than your game saves.
@@ -121,7 +119,7 @@ The rendering script captures real scene layouts; views include `title`, `help`,
 
 Validation on **10 October 2026**:
 
-- 230 integration checks passed, including complete races on all three levels,
+- 228 integration checks passed, including complete races on all three levels,
   timer bonuses, records, releases over UI, cancelled touches, and pause/restart.
 - Rendered and inspected menus, countdown, and every road variant at approximately
   **9:16**, **9:20**, and **3:4** using actual offscreen Godot scene rendering.
@@ -129,8 +127,8 @@ Validation on **10 October 2026**:
 - Debug APK export and signature verification passed. The APK manifest requires
   portrait orientation, ARM64, and the vibration permission.
 - Installed and exercised on a **Samsung SM-A176B (1080 × 2340)**. The top HUD
-  clears the camera cutout. Touch menus, held steering between lanes, quick-tap
-  lane displacement, ice hold/release drift, pause, restart, and explicit resume
+  clears the camera cutout. Touch menus, held steering between lanes, short-press
+  movement, ice hold/release drift, pause, restart, and explicit resume
   after background verified.
 - Android vibration history confirms completed **250 ms** crash requests.
 - Deterministic collision-free simulation reaches the first time bonus at about
@@ -141,7 +139,7 @@ Validation on **10 October 2026**:
 Subjective audio listening, measured frame pacing, long human difficulty
 playtests, physical simultaneous multi-touch, and subjective ice feel remain
 unverified. Ice acceleration,
-drift, countersteering, and precise tap completion are covered by automated tests.
+drift, countersteering, and short-press steering are covered by automated tests.
 The device run produced no Godot script or audio errors. Additional devices remain
 useful for performance, cutout, and compatibility feedback.
 

@@ -386,7 +386,7 @@ func control_identifier(event: InputEvent) -> int:
 func _input(event: InputEvent) -> void:
 	# Releases must reach a tracked control even when a menu consumes the event.
 	if event is InputEventScreenTouch and (not event.pressed or event.canceled):
-		player.release_control(control_identifier(event), not event.canceled)
+		player.release_control(control_identifier(event), event.canceled)
 	elif event is InputEventMouseButton and not event.pressed:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.device != InputEvent.DEVICE_ID_EMULATION:
 			player.release_control(-1)

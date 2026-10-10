@@ -8,10 +8,7 @@ extends Resource
 @export_category("Driving")
 @export var speed_kmh: float = 180.0
 @export var scroll_speed: float = 120.0
-@export var lane_change_seconds: float = 0.18
 @export var lateral_speed: float = 180.0
-@export var tap_seconds: float = 0.16
-@export var ice_tap_seconds: float = 0.30
 @export var ice_acceleration: float = 900.0
 @export var ice_deceleration: float = 600.0
 @export var repair_seconds: float = 4.0
