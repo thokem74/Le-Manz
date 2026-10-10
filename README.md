@@ -23,8 +23,10 @@ Open `project.godot` in Godot and press **F5**. On Android, install
 - On desktop, use held **Left/Right**, **A/D**, or the mouse. Short key presses
   and clicks move only while held. **P/Escape** pauses; Android
   **Back** pauses during a race and returns from menus.
-- Distance earns **2 points/metre**. Every **10 clean passes** earns **1,000 points**.
-  Every **20,000 points** awards more time.
+- Distance earns **2 points/metre**. Every **10 clean passes** earns a
+  difficulty-based point bonus (see below).
+  Every **20,000 points** awards more time. Time accumulates without a cap: keep
+  earning enough points to race indefinitely. Ten-car bonuses never add time directly.
 - A crash resets the current clean streak, plays a crash effect, and vibrates
   the device if enabled. Automatic pit recovery costs **4 seconds** while the
   clock continues; distance scoring stops. Re-entry is protected for **1 second**.
@@ -40,13 +42,14 @@ Open `project.godot` in Godot and press **F5**. On Android, install
   sparks, ice slides leave a subtle trail, and the pit displays a repair indicator.
 - Backgrounding freezes the race and audio. Returning requires **Resume Race**.
 
-| Difficulty | Starting clock | Extra time per 20,000 points |
-|---|---:|---:|
-| Easy | 180 seconds | 90 seconds |
-| Normal | 120 seconds | 60 seconds |
-| Hard | 90 seconds | 45 seconds |
+| Difficulty | Ten-car points | Starting clock | Extra time per 20,000 points |
+|---|---:|---:|---:|
+| Easy | 8,000 | 180 seconds | 90 seconds |
+| Normal | 6,000 | 120 seconds | 60 seconds |
+| Hard | 4,000 | 90 seconds | 45 seconds |
 
-Difficulty changes only the clock. Each level has its own local high score.
+Difficulty changes clocks and ten-car point rewards; driving and traffic stay
+identical. Each level has its own local high score.
 The selected difficulty, sound setting, vibration setting, and records are saved
 in `user://profile.cfg`. Records are updated when a race finishes or is ended
 from the pause menu. The timer values are mobile adaptation values, not a claim
@@ -71,7 +74,7 @@ their behavior rather than constructing their visuals at runtime.
 
 - `resources/race_settings.tres`: select this resource in the Inspector to tune
   difficulty clocks, speed, steering, repairs, scoring, and traffic intervals.
-  Clock-array order is **Easy, Normal, Hard**.
+  Difficulty-array order is **Easy, Normal, Hard**.
 - `RaceSession`: distance, clean-pass bonuses, timer thresholds, and race totals.
 - `PlayerCar`: continuous steering, per-control held directions, and ice momentum; `RaceRoad`: shared lane
   geometry, road variants, and scrolling. `RoadStrip` caches its visual nodes.
@@ -157,7 +160,7 @@ multi-touch event handling, pit recovery,
 expiry, restart, background notifications, Android Back, traffic spacing,
 and complete races, audio state transitions, scenery bounds, and effects. It uses isolated `/tmp` profiles rather than your game saves.
 The rendering script captures real scene layouts; views include `title`, `help`,
-`settings`, `pause`, `results`, `countdown`, `road`, `curves`, `narrow`, `ice`, `night`, `crash1`, `crash2`, `pit`, and `ice_slide`.
+`settings`, `pause`, `results`, `countdown`, `road`, `curves`, `narrow`, `ice`, `night`, `crash1`, `crash2`, `pit`, `ice_slide`, `reward`, and `endurance`.
 
 Validation on **10 October 2026**:
 
@@ -167,7 +170,7 @@ and the generator preserves that setting. The enum distinction is documented in
 [Godot's WAV importer](https://github.com/godotengine/godot/blob/master/editor/import/resource_importer_wav.cpp).
 
 
-- 329 integration checks passed, including complete races on all three levels,
+- 809 integration checks passed, including complete races on all three levels,
   timer bonuses, records, releases over UI, cancelled touches, and pause/restart.
   Divider and edge collision checks cover open and narrow roads. A 60 Hz simulation
   steers past eight alternating narrow obstacles spaced exactly 96 pixels apart.
@@ -205,13 +208,32 @@ and the generator preserves that setting. The enum distinction is documented in
   it records the actual controller and master bus rather than an approximate mix.
 - Android vibration history confirms completed **250 ms** crash requests,
   including two crashes in the enlarged build.
-- Deterministic collision-free simulation reaches the first time bonus at about
-  **90.0 seconds** on each difficulty. Stationary drivers finish at their expected
-  180/120/90-second clocks. These checks measure scoring opportunity and lifecycle;
-  they do not substitute for human balance testing. The Hard bonus opportunity is
-  close to expiry, so long human playtests remain particularly important there.
-  Seed 1982 stationary runs: Easy 8,705 points / 91 passes / 29 crashes;
-  Normal 5,581 / 60 / 19; Hard 4,664 / 47 / 14.
+- With the difficulty-based ten-car rewards, seed-1982 collision-free simulation
+  reaches its first score-based time award at **24.6s / 24.6s / 38.2s** on
+  Easy / Normal / Hard. Ten-minute simulations cover six complete road cycles
+  and 848 passes each; all remain active, with the following results:
+
+  | Difficulty | Score after 600s | Time remaining |
+  |---|---:|---:|
+  | Easy | 731,999 | 2,820 seconds |
+  | Normal | 563,999 | 1,200 seconds |
+  | Hard | 395,999 | 345 seconds |
+
+  Collision protection is deliberately enabled in these pacing simulations;
+  they establish scoring opportunity, not human ability to avoid traffic.
+  Crash-heavy stationary runs still expire: Easy finishes after 270s with
+  24,924 points / 122 passes / 45 crashes (one time extension); Normal after 120s
+  with 10,581 / 60 / 19; Hard after 90s with 7,664 / 47 / 14.
+- The final difficulty-reward APK was debug-signature verified and installed on
+  the Samsung SM-A176B. Race startup, the Easy 8,000-point instructions, crash/pit
+  rendering, and the pause screen after backgrounding were checked; Godot logged
+  no runtime errors. Ten-car reward/threshold ordering and long-run balance were
+  verified by desktop integration tests, not a clean physical-device playthrough.
+- Updated instructions, combined points/time feedback, and long-run HUD displays
+  were rendered and inspected at 9:16, 9:20, and 3:4. The dashboard abbreviates
+  large values using K/M (and larger units); results and records retain exact
+  scores. Time units remain seconds even when abbreviated.
+
 
 Subjective audio listening, measured frame pacing, long human difficulty
 playtests, physical simultaneous multi-touch, and subjective ice feel remain

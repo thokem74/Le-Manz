@@ -37,6 +37,13 @@ func capture() -> void:
 		game.player.press_control(0, 1)
 		game.player.advance(0.1)
 		game.player.release_control(0)
+	if view == "reward":
+		game.session.clean_passes = 9
+		game.session.distance_metres = (20000.0 - game.settings.clean_pass_bonus_points[game.session.difficulty]) / 2.0
+		game._on_overtaken(game.traffic.cars[0])
+	if view == "endurance":
+		game.session.distance_metres = 617283.5
+		game.session.remaining_seconds = 12345.0
 	game.update_driving_feedback(0.0)
 	game.set_physics_process(false)
 	game.update_hud()

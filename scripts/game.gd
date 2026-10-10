@@ -3,6 +3,11 @@ extends Node2D
 
 enum Phase { TITLE, COUNTDOWN, RACING, PIT, FINISH, RESULTS }
 
+const HUD_DIVISORS: Array[int] = [
+	1000000000000000000, 1000000000000000, 1000000000000, 1000000000, 1000000, 1000
+]
+const HUD_SUFFIXES: Array[String] = ["E", "P", "T", "B", "M", "K"]
+
 @export var settings: RaceSettings
 
 var session: RaceSession
@@ -26,6 +31,7 @@ var new_record: bool = false
 @onready var hud: Control = $UI/HUD
 @onready var finish_line: Sprite2D = $FinishLine
 @onready var headlights: Polygon2D = $Player/Headlights
+@onready var help_template: String = $UI/Help/Text.text
 
 
 func _ready() -> void:
@@ -196,12 +202,20 @@ func begin_crash() -> void:
 func _on_overtaken(car: TrafficCar) -> void:
 	if phase != Phase.RACING:
 		return
+	if session.remaining_seconds <= 0.0:
+		return
 	audio.play_pass(car.position.x - player.position.x, session.clean_passes + 1)
-	if session.register_pass():
-		show_notice("10 CLEAN PASSES! +1000", 2.0)
-		audio.play_effect(&"bonus")
+	var earned_pass_bonus: bool = session.register_pass()
 	var awards: int = session.award_time()
-	if awards > 0:
+	if earned_pass_bonus:
+		var notice: String = "10 CLEAN PASSES! +%d" % settings.clean_pass_bonus_points[session.difficulty]
+		if awards > 0:
+			notice += "\nEXTRA TIME! +%d SEC" % int(settings.bonus_seconds[session.difficulty] * awards)
+		show_notice(notice, 2.5)
+		audio.play_effect(&"bonus")
+		if awards > 0:
+			audio.play_effect(&"time")
+	elif awards > 0:
 		announce_time_bonus(awards)
 
 
@@ -276,6 +290,9 @@ func show_results(update_record: bool = true) -> void:
 	new_record = profile.record_score(session.difficulty, session.score()) if update_record else false
 	$UI/Results/Difficulty.text = session.DIFFICULTY_NAMES[session.difficulty]
 	$UI/Results/Score.text = "%06d" % session.score()
+	# Exact records remain readable even when a long run outgrows the normal font.
+	var result_digits: int = $UI/Results/Score.text.length()
+	$UI/Results/Score.add_theme_font_size_override("font_size", 24 if result_digits <= 13 else 16)
 	var best_text: String = "BEST %06d" % profile.records[session.difficulty]
 	$UI/Results/Record.text = "NEW BEST!" if new_record else best_text
 	$UI/Results/Stats.text = "%d PASSES / %d CRASHES" % [session.total_passes, session.crashes]
@@ -315,6 +332,10 @@ func refresh_title() -> void:
 
 
 func show_panel(name: String) -> void:
+	if name == "Help":
+		$UI/Help/Text.text = help_template.format({
+			"bonus": settings.clean_pass_bonus_points[profile.difficulty]
+		})
 	for panel_name in ["Title", "Help", "Settings", "Pause", "Results"]:
 		get_node("UI/" + panel_name).visible = panel_name == name
 	# Touch play should not leave keyboard focus highlighting the previous menu.
@@ -381,8 +402,8 @@ func show_notice(message: String, seconds: float) -> void:
 func update_hud() -> void:
 	if session == null or not hud.visible:
 		return
-	$UI/HUD/Score.text = "%06d" % session.score()
-	$UI/HUD/Time.text = "%03d" % ceili(session.remaining_seconds)
+	$UI/HUD/Score.text = format_hud_number(session.score(), 6)
+	$UI/HUD/Time.text = format_hud_number(ceili(session.remaining_seconds), 3)
 	$UI/HUD/Speed.text = "%03d" % int(settings.speed_kmh) if phase == Phase.RACING else "000"
 	$UI/HUD/Passes.text = "%d / 10" % (session.clean_passes % settings.passes_per_bonus)
 	$UI/HUD/Difficulty.text = session.DIFFICULTY_NAMES[session.difficulty]
@@ -395,6 +416,19 @@ func update_hud() -> void:
 		session.remaining_seconds <= 10.0 and int(session.remaining_seconds * 4.0) % 2 == 0
 	)
 	$UI/HUD/Time.modulate = Color("ff6b6b") if warning else Color.WHITE
+
+
+func format_hud_number(value: int, minimum_digits: int) -> String:
+	if value < int(pow(10, minimum_digits)):
+		return str(value).pad_zeros(minimum_digits)
+	# Keep the large-font dashboard readable during uncapped endurance runs.
+	for index in range(HUD_DIVISORS.size()):
+		if value >= HUD_DIVISORS[index]:
+			var scaled: float = float(value) / HUD_DIVISORS[index]
+			if scaled < 10.0:
+				return "%.1f%s" % [floorf(scaled * 10.0) / 10.0, HUD_SUFFIXES[index]]
+			return "%d%s" % [int(scaled), HUD_SUFFIXES[index]]
+	return str(value)
 
 
 func control_identifier(event: InputEvent) -> int:

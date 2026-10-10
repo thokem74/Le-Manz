@@ -55,12 +55,15 @@ func register_pass() -> bool:
 	total_passes += 1
 	clean_passes += 1
 	if clean_passes % settings.passes_per_bonus == 0:
-		bonus_points += settings.pass_bonus
+		bonus_points += settings.clean_pass_bonus_points[difficulty]
 		return true
 	return false
 
 
 func award_time() -> int:
+	# Expired races cannot be revived by a late score or pass event.
+	if remaining_seconds <= 0.0:
+		return 0
 	var awards: int = 0
 	while score() >= next_time_threshold:
 		remaining_seconds += settings.bonus_seconds[difficulty]

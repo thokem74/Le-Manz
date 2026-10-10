@@ -18,6 +18,7 @@ func check(condition: bool, description: String) -> void:
 
 func run() -> void:
 	check_clocks_and_scoring()
+	check_endurance_rules()
 	check_persistence()
 	var game: Node = load("res://scenes/game.tscn").instantiate()
 	game.get_node("Profile").storage_path = "/tmp/le-manz-integration-profile.cfg"
@@ -31,6 +32,7 @@ func run() -> void:
 	check_traffic(game)
 	check_closed_gaps(game)
 	check_narrow_escape_routes(game)
+	check_endurance_hud(game)
 	check_portrait_geometry()
 	await check_driving_audio(game)
 	await check_reward_audio(game)
@@ -54,13 +56,13 @@ func check_clocks_and_scoring() -> void:
 		check(race.score() == 100 and is_equal_approx(race.distance_metres, 50.0), "Fixed speed / metre scoring for difficulty %d" % level)
 		for count in range(9):
 			check(not race.register_pass(), "No early clean-pass bonus")
-		check(race.register_pass() and race.score() == 1100, "Tenth clean pass scores 1000")
-		race.distance_metres = 9500.0
+		check(race.register_pass() and race.score() == 100 + rules.clean_pass_bonus_points[level], "Tenth clean pass scores difficulty bonus")
+		race.distance_metres = (20000.0 - rules.clean_pass_bonus_points[level]) / 2.0
 		var before: float = race.remaining_seconds
 		check(race.award_time() == 1, "20,000 threshold awards once")
 		check(is_equal_approx(race.remaining_seconds - before, [90.0, 60.0, 45.0][level]), "Correct difficulty time award")
 		check(race.award_time() == 0, "A threshold cannot award twice")
-		race.distance_metres = 29500.0
+		race.distance_metres = (60000.0 - rules.clean_pass_bonus_points[level]) / 2.0
 		check(race.award_time() == 2, "Multiple crossed thresholds award individually")
 		race.register_crash()
 		check(race.clean_passes == 0 and race.total_passes == 10 and race.score() == 60000, "Crash preserves points and total passes, resets clean streak")
@@ -78,6 +80,65 @@ func check_clocks_and_scoring() -> void:
 	race.remaining_seconds = 0.1
 	race.advance(2.0, true)
 	check(race.score() == 10, "Long-frame expiry caps distance")
+
+
+func check_endurance_rules() -> void:
+	var rules := RaceSettings.new()
+	var race := RaceSession.new(rules)
+	for level in range(3):
+		race.start(level)
+		for number in range(1, 31):
+			var clock_before: float = race.remaining_seconds
+			var earned: bool = race.register_pass()
+			check(earned == (number % 10 == 0), "Only complete groups of ten award points")
+			check(race.bonus_points == (number / 10) * rules.clean_pass_bonus_points[level], "Difficulty bonus accumulates at passes 10, 20, 30")
+			check(race.remaining_seconds == clock_before, "Pass bonuses never directly add time")
+			var threshold_before: int = race.next_time_threshold
+			var awards: int = race.award_time()
+			check(race.remaining_seconds == clock_before + awards * rules.bonus_seconds[level], "Only score thresholds add time")
+			check(race.next_time_threshold == threshold_before + awards * 20000 and race.award_time() == 0, "All newly crossed thresholds award once")
+		race.start(level)
+		for number in range(9):
+			race.register_pass()
+		race.register_crash()
+		check(not race.register_pass() and race.bonus_points == 0, "Crash resets an unfinished ten-car bonus")
+		for number in range(9):
+			race.register_pass()
+		check(race.bonus_points == rules.clean_pass_bonus_points[level], "Ten fresh passes earn the bonus after a crash")
+		race.distance_metres = 100000.0
+		check(race.award_time() == 10 and race.remaining_seconds > rules.starting_seconds[level], "Multiple awards accumulate above the starting clock")
+		race.remaining_seconds = 0.0
+		race.distance_metres += 100000.0
+		var points_before: int = race.bonus_points
+		check(not race.register_pass() and race.award_time() == 0 and race.remaining_seconds == 0.0 and race.bonus_points == points_before, "Expired races cannot earn points or revive")
+
+
+func check_endurance_hud(game: Node) -> void:
+	for level in range(3):
+		game.profile.difficulty = level
+		game.show_panel("Help")
+		check(game.get_node("UI/Help/Text").text.contains("+%d" % game.settings.clean_pass_bonus_points[level]), "Instructions show selected difficulty reward")
+	game.start_race()
+	game.phase = game.Phase.RACING
+	game.session.distance_metres = 617283.5
+	game.session.remaining_seconds = 12345.0
+	game.update_hud()
+	check(game.get_node("UI/HUD/Score").text == "1.2M" and game.get_node("UI/HUD/Time").text == "12K", "Endurance HUD abbreviates large score and clock")
+	for value in [999, 1000, 9999, 10000, 999999, 1000000, 999999999, 1000000000]:
+		check(game.format_hud_number(value, 3).length() <= 4, "Long timer remains inside dashboard width")
+	game.show_results()
+	check(game.get_node("UI/Results/Score").text == "1234567", "Results preserve exact unabridged score")
+	game.start_race()
+	game.phase = game.Phase.RACING
+	game.session.clean_passes = 9
+	game.session.distance_metres = (20000.0 - game.settings.clean_pass_bonus_points[game.session.difficulty]) / 2.0
+	game._on_overtaken(game.traffic.cars[0])
+	check(game.get_node("UI/HUD/Notice").text == "10 CLEAN PASSES! +4000\nEXTRA TIME! +45 SEC", "Coincident rewards display both points and time")
+	var before: int = game.session.bonus_points
+	game.profile.difficulty = 0
+	for number in range(10):
+		game._on_overtaken(game.traffic.cars[0])
+	check(game.session.bonus_points - before == 4000, "Mid-race difficulty selection does not change rewards")
 
 
 func check_persistence() -> void:
@@ -417,6 +478,18 @@ func check_clean_run_thresholds(game: Node) -> void:
 				break
 		check(game.session.next_time_threshold == 40000, "Clean run can reach extra time on difficulty %d" % level)
 		print("%s first time bonus: %.1fs, %d passes" % [RaceSession.DIFFICULTY_NAMES[level], game.session.elapsed_seconds, game.session.total_passes])
+	for level in range(3):
+		game.profile.difficulty = level
+		game.start_race()
+		game.phase = game.Phase.RACING
+		game.traffic.rng.seed = 1982
+		game.protection_remaining = 10000.0
+		for step in range(60 * 600):
+			game._physics_process(1.0 / 60.0)
+			if game.phase != game.Phase.RACING:
+				break
+		check(game.phase == game.Phase.RACING and game.session.remaining_seconds > game.settings.starting_seconds[level], "Ten-minute clean traffic opportunities sustain difficulty %d" % level)
+		print("%s 600s clean simulation: %d points, %d passes, %.1fs remaining" % [RaceSession.DIFFICULTY_NAMES[level], game.session.score(), game.session.total_passes, game.session.remaining_seconds])
 	# Narrow traffic must keep a full reaction gap as it reaches the player.
 	game.traffic.reset_traffic()
 	game.road.section = RaceRoad.Section.NARROW
@@ -668,7 +741,7 @@ func check_reward_audio(game: Node) -> void:
 		game._on_overtaken(obstacle)
 		var voice: AudioStreamPlayer = game.audio.passing_voices[voice_index]
 		check(is_equal_approx(voice.pitch_scale, pow(2.0, semitones[number - 1] / 12.0)), "Clean pass %d uses its musical step" % number)
-	check(game.session.clean_passes == 10 and game.session.bonus_points == 1000, "Reward sound changes preserve ten-pass scoring")
+	check(game.session.clean_passes == 10 and game.session.bonus_points == game.settings.clean_pass_bonus_points[game.session.difficulty], "Reward sound accompanies difficulty-based ten-pass scoring")
 	var voice_index: int = game.audio.next_pass_voice
 	game._on_overtaken(obstacle)
 	check(game.audio.passing_voices[voice_index].pitch_scale == 1.0, "Completed streak resets passing register")
@@ -701,7 +774,7 @@ func check_reward_audio(game: Node) -> void:
 	var before: float = game.session.remaining_seconds
 	game._on_overtaken(obstacle)
 	check(game.session.next_time_threshold == 40000 and game.session.remaining_seconds > before, "Coincident time award updates gameplay immediately")
-	check(game.get_node("UI/HUD/Notice").text.begins_with("EXTRA TIME!") and game.audio.pending_extra_time, "Time award HUD is immediate while its sound is deferred")
+	check(game.get_node("UI/HUD/Notice").text.contains("10 CLEAN PASSES!") and game.get_node("UI/HUD/Notice").text.contains("EXTRA TIME!") and game.audio.pending_extra_time, "Time award HUD is immediate while its sound is deferred")
 	for transition in ["mute", "pause", "restart", "finish"]:
 		game.start_race()
 		game.phase = game.Phase.RACING
