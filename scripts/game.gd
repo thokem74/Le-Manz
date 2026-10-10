@@ -196,7 +196,7 @@ func begin_crash() -> void:
 func _on_overtaken(car: TrafficCar) -> void:
 	if phase != Phase.RACING:
 		return
-	audio.play_pass(car.position.x - player.position.x)
+	audio.play_pass(car.position.x - player.position.x, session.clean_passes + 1)
 	if session.register_pass():
 		show_notice("10 CLEAN PASSES! +1000", 2.0)
 		audio.play_effect(&"bonus")
@@ -249,6 +249,7 @@ func begin_finish() -> void:
 	$UI/HUD/Banner.text = "TIME UP!"
 	$UI/HUD/Notice.text = ""
 	notice_remaining = 0.0
+	audio.cancel_rewards()
 	audio.set_driving_effects(false, false)
 	audio.set_engine(false)
 	effects.clear()

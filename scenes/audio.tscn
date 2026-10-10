@@ -22,7 +22,7 @@ stream = ExtResource("3")
 volume_db = -3.0
 [node name="Bonus" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("4")
-volume_db = -5.0
+volume_db = -3.0
 [node name="ExtraTime" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("5")
 volume_db = -5.0
@@ -40,17 +40,17 @@ stream = ExtResource("9")
 volume_db = -7.0
 [node name="Pass0" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("10")
-volume_db = -8.0
+volume_db = -6.0
 bus = &"Pass0"
 [node name="Pass1" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("11")
-volume_db = -8.0
+volume_db = -6.0
 bus = &"Pass1"
 [node name="Pass2" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("12")
-volume_db = -8.0
+volume_db = -6.0
 bus = &"Pass2"
 [node name="Pass3" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("13")
-volume_db = -8.0
+volume_db = -6.0
 bus = &"Pass3"

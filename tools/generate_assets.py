@@ -183,15 +183,46 @@ def square(t, frequency):
     return 1.0 if math.sin(t * frequency * math.tau) >= 0 else -1.0
 
 
+def reward_note(t, frequency, duration, strength=1.0):
+    """A bell body with quiet pulse harmonics and a click-free note envelope."""
+    if t < 0 or t >= duration:
+        return 0.0
+    attack = min(1.0, t / 0.003)
+    release = min(1.0, (duration - t) / 0.025)
+    decay = math.exp(-5.0 * t / duration)
+    phase = t * frequency * math.tau
+    # A finite odd-harmonic series adds SID-like colour without harsh square edges.
+    pulse = (math.sin(phase * 3) / 3 + math.sin(phase * 5) / 5) * 0.14
+    bell = math.sin(phase) + 0.22 * math.sin(phase * 2)
+    return strength * attack * release * decay * (bell + pulse)
+
+
+def passing_reward(t):
+    # The second note overlaps the first note's decay rather than cutting it off.
+    return 0.30 * (reward_note(t, 523.251, 0.12) + reward_note(t - 0.055, 783.991, 0.145))
+
+
+def bonus_reward(t):
+    ascent = sum(reward_note(t - index * 0.065, frequency, 0.16, 0.22)
+                 for index, frequency in enumerate((523.251, 659.255, 783.991, 1046.502)))
+    chord_time = t - 0.24
+    chord = sum(reward_note(chord_time, frequency, 0.48, strength)
+                for frequency, strength in ((523.251, 0.10), (659.255, 0.08), (783.991, 0.08), (1046.502, 0.12)))
+    bass = reward_note(chord_time, 130.813, 0.32, 0.10)
+    # A quiet octave shimmer decorates the chord's tail without dominating it.
+    shimmer = reward_note(chord_time - 0.045, 2093.005, 0.435, 0.035)
+    return ascent + chord + bass + shimmer
+
+
 # Integer harmonics of 60 Hz yield a periodic, zero-crossing one-second loop.
 write_wave("engine", 1.0, lambda t: (0.22 * math.sin(t * 120 * math.tau) + 0.16 * math.sin(t * 240 * math.tau) + 0.10 * math.sin(t * 480 * math.tau) + 0.065 * math.sin(t * 720 * math.tau)) * (0.9 + 0.1 * math.cos(t * 60 * math.tau)))
-write_wave("passing", 0.18, lambda t: math.sin(math.tau * (760 * t - 1200 * t * t)) * 0.24 * math.sin(math.pi * t / 0.18))
+write_wave("passing", 0.20, passing_reward)
 write_wave("ice_slip", 1.0, lambda t: 0.07 * math.sin(t * 1080 * math.tau) * math.sin(t * 13 * math.tau) + 0.035 * math.sin(t * 1620 * math.tau))
 write_wave("repair", 1.0, lambda t: 0.10 * math.sin(t * 360 * math.tau) * (0.5 - 0.5 * math.cos(t * 8 * math.tau)))
 noise = random.Random(1982)
 write_wave("crash", 0.55, lambda t: (noise.uniform(-1, 1) * 0.45 + square(t, 40 + 80 * (1 - t / 0.55)) * 0.15) * (1 - t / 0.55))
 write_wave("tick", 0.09, lambda t: square(t, 660) * 0.18)
-write_wave("bonus", 0.32, lambda t: square(t, [523, 659, 784, 1046][min(3, int(t / 0.08))]) * 0.20)
+write_wave("bonus", 0.72, bonus_reward)
 write_wave("extra_time", 0.64, lambda t: square(t, [523, 659, 784, 1046, 784, 1046, 1318, 1568][min(7, int(t / 0.08))]) * 0.20)
 write_wave("finish", 0.8, lambda t: square(t, [784, 659, 523, 392][min(3, int(t / 0.2))]) * 0.19)
 # WAV import mode 2 means Forward; mode 1 means Disabled, not LOOP_FORWARD.

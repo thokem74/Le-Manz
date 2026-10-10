@@ -158,8 +158,8 @@ for i in range(4):
     buses += f'bus/{i + 1}/name = &"Pass{i}"\nbus/{i + 1}/send = &"Master"\nbus/{i + 1}/effect/0/effect = SubResource("pan{i}")\nbus/{i + 1}/effect/0/enabled = true\n'
 save("default_bus_layout.tres", buses)
 audio = '[gd_scene load_steps=14 format=3]\n[ext_resource type="Script" path="res://scripts/audio.gd" id="1"]\n'
-effects = [("Engine", "engine", -3), ("Crash", "crash", -3), ("Bonus", "bonus", -5), ("ExtraTime", "extra_time", -5), ("Finish", "finish", -5), ("Tick", "tick", -7), ("IceSlip", "ice_slip", -9), ("Repair", "repair", -7)]
-effects += [(f"Pass{i}", "passing", -8) for i in range(4)]
+effects = [("Engine", "engine", -3), ("Crash", "crash", -3), ("Bonus", "bonus", -3), ("ExtraTime", "extra_time", -5), ("Finish", "finish", -5), ("Tick", "tick", -7), ("IceSlip", "ice_slip", -9), ("Repair", "repair", -7)]
+effects += [(f"Pass{i}", "passing", -6) for i in range(4)]
 for index, (_, file, _) in enumerate(effects, 2):
     audio += f'[ext_resource type="AudioStream" path="res://assets/audio/{file}.wav" id="{index}"]\n'
 audio += '[node name="Audio" type="Node"]\nscript = ExtResource("1")\n'

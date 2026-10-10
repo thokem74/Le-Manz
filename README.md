@@ -32,7 +32,8 @@ Open `project.godot` in Godot and press **F5**. On Android, install
   Narrow sections use the middle two marked lanes and smoothly constrain the car;
   headlights and rear lights help with night driving.
 - A continuous synthesized engine runs while racing. Each clean overtake plays
-  a short stereo sweep; ten-pass bonuses have their own sound. Ice sliding and
+  a bright C–G chime that rises gently across the clean streak. Ten-pass bonuses
+  resolve into a fuller major chord. Ice sliding and
   repairs add quieter effects. **Settings → Sound** controls all audio.
 - Roadside trees, shrubs, signs, posts, and rails scroll past; ice adds snow and
   surface markings, and night markers reflect light. Crashes emit brief pixel
@@ -83,6 +84,24 @@ their behavior rather than constructing their visuals at runtime.
 - `RoadScenery` / `RaceEffects`: 48 reusable scenery instances, four skid particles,
   eight crash particles, and repair animation. These systems are decorative;
   `game.gd` coordinates their state with the race phases.
+
+Passing rewards last **0.20 seconds** and use semitone steps
+**0, 0, 2, 2, 4, 4, 5, 5, 7, 7** across ten clean passes. Each passing voice keeps
+its own pitch and stereo position. The **0.72-second** bonus uses a C–E–G–C
+ascent and layered major chord, with the engine ducked throughout. A simultaneous
+extra-time award updates the HUD immediately; its chime waits for bonus completion.
+Mute, pause/backgrounding, restart, and finish cancel pending reward audio.
+
+For a listening review, generate a preview of the actual Godot audio mix:
+
+```sh
+godot --path . --script tests/reward_preview.gd
+```
+
+`builds/audio/le-manz-reward-preview.wav` contains about 12 seconds: a ten-pass
+buildup and bonus alone, a short gap, then the same sequence over the engine.
+Generated previews and Android builds are ignored by Git and excluded from exports.
+Phone-speaker listening quality still needs a direct listening check.
 
 Rendering uses Compatibility mode and a **280 × 480** base logical canvas with
 nearest-neighbour filtering and aspect-preserving scaling. Tall phones extend the
@@ -148,14 +167,16 @@ and the generator preserves that setting. The enum distinction is documented in
 [Godot's WAV importer](https://github.com/godotengine/godot/blob/master/editor/import/resource_importer_wav.cpp).
 
 
-- 299 integration checks passed, including complete races on all three levels,
+- 329 integration checks passed, including complete races on all three levels,
   timer bonuses, records, releases over UI, cancelled touches, and pause/restart.
   Divider and edge collision checks cover open and narrow roads. A 60 Hz simulation
   steers past eight alternating narrow obstacles spaced exactly 96 pixels apart.
-  Blocked spawn retries and narrowing gap enforcement also pass.
+  Blocked spawn retries and narrowing gap enforcement also pass. Reward checks cover
+  all ten pitches, rollover, crash reset, independent overlapping voices, bonus
+  completion, immediate time awards, and deferred-cue cancellation.
 - The real-output audio test passed: engine output continues beyond its loop,
-  passing sweeps pan left/right, and overlapping effects peak at **0.8913**
-  (approximately -1 dBFS). Engine loop RMS was **0.1344**; muted peak was **0**.
+  passing sweeps pan left/right, and overlapping effects peak at **0.8092**
+  (approximately -1.84 dBFS). Engine loop RMS was **0.1344**; muted peak was **0**.
   This test requires a working desktop audio driver and measures the digital mix,
   rather than speaker listening quality.
 - Rendered and inspected menus, countdown, and every road variant at approximately
@@ -177,6 +198,11 @@ and the generator preserves that setting. The enum distinction is documented in
   output initialization; audible speaker quality is still unverified. Touch
   steering, pause, explicit resume, snowy scenery, and reflective night scenery
   were exercised again.
+- The reward-audio APK was rebuilt, signed, and installed on the same device.
+  Race startup initialized active unmuted stereo output; pause and returning from
+  background displayed the resume screen. Listening previews are excluded from
+  the APK. The generated stereo preview lasts **12.07 seconds**, with peak **0.4784**;
+  it records the actual controller and master bus rather than an approximate mix.
 - Android vibration history confirms completed **250 ms** crash requests,
   including two crashes in the enlarged build.
 - Deterministic collision-free simulation reaches the first time bonus at about

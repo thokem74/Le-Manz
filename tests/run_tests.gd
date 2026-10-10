@@ -33,6 +33,7 @@ func run() -> void:
 	check_narrow_escape_routes(game)
 	check_portrait_geometry()
 	await check_driving_audio(game)
+	await check_reward_audio(game)
 	check_immersion_graphics(game)
 	check_clean_run_thresholds(game)
 	check_difficulty_playthroughs(game)
@@ -547,7 +548,7 @@ func check_driving_audio(game: Node) -> void:
 	check(not game.audio.ice_slip.playing and not game.audio.repair.playing, "Driving loops stop when their states end")
 	game.audio.stop_all()
 	for index in range(4):
-		game.audio.play_pass(-56.0 if index % 2 == 0 else 56.0)
+		game.audio.play_pass(-56.0 if index % 2 == 0 else 56.0, index + 1)
 		var bus: int = AudioServer.get_bus_index("Pass%d" % index)
 		var pan: AudioEffectPanner = AudioServer.get_bus_effect(bus, 0)
 		check(pan.pan < 0.0 if index % 2 == 0 else pan.pan > 0.0, "Passing voice %d uses the correct stereo side" % index)
@@ -566,7 +567,7 @@ func check_driving_audio(game: Node) -> void:
 	check(game.session.total_passes == 10 and game.audio.next_pass_voice == 2, "Every clean overtake starts exactly one passing sound")
 	check(game.audio.bonus.playing, "Ten-pass bonus remains a distinct sound")
 	game.audio.set_enabled(false)
-	game.audio.play_pass(56.0)
+	game.audio.play_pass(56.0, 1)
 	game.audio.play_effect(&"crash")
 	game.audio.set_engine(true)
 	game.audio.set_driving_effects(true, true)
@@ -576,7 +577,7 @@ func check_driving_audio(game: Node) -> void:
 	check(all_silent, "Persistent sound toggle gates every audio voice")
 	game.audio.set_enabled(true)
 	game.audio.set_engine(true)
-	game.audio.play_pass(56.0)
+	game.audio.play_pass(56.0, 1)
 	game.pause_race()
 	check(not game.audio.engine.playing and not game.audio.passing_voices[0].playing, "Pause silences engine and passing voices immediately")
 	game.resume_race()
@@ -650,3 +651,69 @@ func check_immersion_graphics(game: Node) -> void:
 	check(not game.effects.repair_indicator.visible and not game.effects.skid.emitting, "Finish clears driving effects")
 	game.start_race()
 	check(not game.effects.crash.visible and game.effects.repair_elapsed == 0.0, "Restart clears particles and repair animation")
+
+
+func check_reward_audio(game: Node) -> void:
+	game.start_race()
+	game.phase = game.Phase.RACING
+	game.audio.set_enabled(true)
+	game.audio.set_engine(true)
+	check(is_equal_approx(game.audio.passing_voices[0].stream.get_length(), 0.20), "Passing reward lasts 0.20 seconds")
+	check(is_equal_approx(game.audio.bonus.stream.get_length(), 0.72), "Bonus reward lasts 0.72 seconds")
+	var semitones: Array[int] = [0, 0, 2, 2, 4, 4, 5, 5, 7, 7]
+	var obstacle: TrafficCar = game.traffic.cars[0]
+	obstacle.position.x = game.player.position.x - 56.0
+	for number in range(1, 11):
+		var voice_index: int = game.audio.next_pass_voice
+		game._on_overtaken(obstacle)
+		var voice: AudioStreamPlayer = game.audio.passing_voices[voice_index]
+		check(is_equal_approx(voice.pitch_scale, pow(2.0, semitones[number - 1] / 12.0)), "Clean pass %d uses its musical step" % number)
+	check(game.session.clean_passes == 10 and game.session.bonus_points == 1000, "Reward sound changes preserve ten-pass scoring")
+	var voice_index: int = game.audio.next_pass_voice
+	game._on_overtaken(obstacle)
+	check(game.audio.passing_voices[voice_index].pitch_scale == 1.0, "Completed streak resets passing register")
+	var untouched_pitch: float = game.audio.passing_voices[voice_index].pitch_scale
+	game.audio.play_pass(56.0, 9)
+	check(game.audio.passing_voices[voice_index].pitch_scale == untouched_pitch, "Overlapping voice keeps its own pitch")
+	game.begin_crash()
+	game.advance_pit(4.0)
+	voice_index = game.audio.next_pass_voice
+	game._on_overtaken(obstacle)
+	check(game.audio.passing_voices[voice_index].pitch_scale == 1.0 and game.session.clean_passes == 1, "Crash resets the reward buildup")
+	game.audio.stop_all()
+	game.audio.set_engine(true)
+	game.audio.play_effect(&"bonus")
+	game.audio.play_effect(&"time")
+	check(game.audio.pending_extra_time and not game.audio.extra_time.playing, "Extra-time sound waits for the bonus")
+	await create_timer(0.60).timeout
+	game.audio.advance_mix(0.1)
+	check(game.audio.bonus.playing and game.audio.engine_gain < 0.4, "Engine remains ducked throughout the bonus tail")
+	await create_timer(0.24).timeout
+	check(not game.audio.bonus.playing and game.audio.extra_time.playing and not game.audio.pending_extra_time, "Bonus completion starts one deferred extra-time chime")
+	game.audio.extra_time.stop()
+	game.audio._on_bonus_finished()
+	check(not game.audio.extra_time.playing, "Finished callback cannot replay a consumed time cue")
+	# A ten-pass award crossing 20,000 points updates the clock/UI immediately.
+	game.start_race()
+	game.phase = game.Phase.RACING
+	game.session.clean_passes = 9
+	game.session.distance_metres = 9500.0
+	var before: float = game.session.remaining_seconds
+	game._on_overtaken(obstacle)
+	check(game.session.next_time_threshold == 40000 and game.session.remaining_seconds > before, "Coincident time award updates gameplay immediately")
+	check(game.get_node("UI/HUD/Notice").text.begins_with("EXTRA TIME!") and game.audio.pending_extra_time, "Time award HUD is immediate while its sound is deferred")
+	for transition in ["mute", "pause", "restart", "finish"]:
+		game.start_race()
+		game.phase = game.Phase.RACING
+		game.audio.set_enabled(true)
+		game.audio.play_effect(&"bonus")
+		game.audio.play_effect(&"time")
+		match transition:
+			"mute": game.audio.set_enabled(false)
+			"pause": game.pause_race()
+			"restart": game.start_race()
+			"finish": game.begin_finish()
+		check(not game.audio.pending_extra_time and not game.audio.bonus.playing, "%s cancels pending reward audio" % transition)
+		game.audio._on_bonus_finished()
+		check(not game.audio.extra_time.playing, "%s prevents a stale bonus callback from playing extra time" % transition)
+	game.audio.set_enabled(false)
